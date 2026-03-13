@@ -5,6 +5,7 @@ import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
@@ -44,19 +45,24 @@ public class EmailService {
     }
     
     private void sendHtmlEmail(String to, String subject, String htmlContent) {
+        log.info("[EMAIL] Attempting to send '{}' to: {} (from: {})", subject, to, fromEmail);
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            
+
             helper.setFrom(fromEmail, fromName);
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(htmlContent, true);
-            
+
             mailSender.send(message);
-            log.info("Email sent successfully to: {}", to);
+            log.info("[EMAIL] Sent successfully to: {}", to);
+        } catch (MailException e) {
+            // Covers MailAuthenticationException, MailSendException, etc.
+            log.error("[EMAIL] Spring Mail failure sending to {}: {}", to, e.getMessage());
+            throw new RuntimeException("Failed to send email: " + e.getMessage(), e);
         } catch (MessagingException | java.io.UnsupportedEncodingException e) {
-            log.error("Failed to send email to {}: {}", to, e.getMessage());
+            log.error("[EMAIL] MIME error sending to {}: {}", to, e.getMessage());
             throw new RuntimeException("Failed to send email", e);
         }
     }

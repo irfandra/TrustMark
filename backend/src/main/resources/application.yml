@@ -1,13 +1,13 @@
 spring:
   application:
     name: digital-seal-backend
-  
+
   datasource:
     url: jdbc:mysql://localhost:3306/digital_seal?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:password}
     driver-class-name: com.mysql.cj.jdbc.Driver
-  
+
   jpa:
     hibernate:
       ddl-auto: ${DATABASE_MODE:validate}
@@ -16,12 +16,12 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.MySQL8Dialect
-  
+
   flyway:
     enabled: true
     baseline-on-migrate: true
     locations: classpath:db/migration
-  
+
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
@@ -61,7 +61,7 @@ web3:
 
 # CORS Configuration
 cors:
-  allowed-origins: ${CORS_ORIGINS:http://localhost:3000,http://localhost:8081}
+  allowed-origins: ${CORS_ORIGINS:http://localhost:3000,http://localhost:8081,http://192.168.1.2:8080}
   allowed-methods: GET,POST,PUT,DELETE,OPTIONS
   allowed-headers: "*"
   allow-credentials: true
@@ -88,7 +88,7 @@ springdoc:
 management:
   health:
     mail:
-      enabled: false   # mail SMTP not available in dev; don't fail the health check
+      enabled: false # mail SMTP not available in dev; don't fail the health check
   endpoint:
     health:
       show-details: always
@@ -100,7 +100,7 @@ logging:
     # Console: timestamp level [THREAD] --- message
     console: "%d{yyyy-MM-dd HH:mm:ss} %-5level --- %msg%n"
     # File: same pattern — grep by [CATEGORY] or level
-    file:    "%d{yyyy-MM-dd HH:mm:ss} %-5level --- %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} %-5level --- %msg%n"
   level:
     com.digitalseal: INFO
     org.springframework.security: WARN
