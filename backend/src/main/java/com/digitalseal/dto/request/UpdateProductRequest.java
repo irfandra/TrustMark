@@ -1,9 +1,14 @@
 package com.digitalseal.dto.request;
 
-import com.digitalseal.model.entity.ProductCategory;
-import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
+
+import com.digitalseal.model.entity.ProductCategory;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
@@ -24,8 +29,7 @@ public class UpdateProductRequest {
     @Schema(description = "Product image URL (DRAFT only)", example = "https://example.com/product.png")
     private String imageUrl;
     
-    @Schema(description = "Collection ID (DRAFT only, set null to remove from collection)", example = "1")
-    private Long collectionId;
+    // ...existing code...
     
     @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than 0")
     @Digits(integer = 10, fraction = 8, message = "Invalid price format")

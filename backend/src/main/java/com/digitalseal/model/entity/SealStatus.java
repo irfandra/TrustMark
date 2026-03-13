@@ -9,6 +9,5 @@ public enum SealStatus {
     PRE_MINTED,     // NFT minted on-chain, not yet sold
     RESERVED,       // Buyer has placed an order, payment pending/confirmed
     REALIZED,       // Ownership transferred to buyer's wallet
-    BURNED,         // NFT burned (unsold item cleanup, recall)
-    REVOKED         // Seal revoked (counterfeit detected, legal issue)
+    // ...existing code...
 }

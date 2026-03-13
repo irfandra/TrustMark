@@ -89,3 +89,5 @@ coverage/
 *.swp
 *.swo
 *~
+# Copilot agent customizations
+.github/

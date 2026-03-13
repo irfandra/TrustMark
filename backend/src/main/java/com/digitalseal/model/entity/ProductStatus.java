@@ -13,6 +13,5 @@ public enum ProductStatus {
     LISTED,         // Available for purchase on marketplace
     SOLD_OUT,       // All items sold/reserved
     COMPLETED,      // All items delivered and ownership transferred
-    DELISTED,       // Removed from marketplace by brand
-    ARCHIVED        // Permanently archived — no further changes
+    // ...existing code...
 }

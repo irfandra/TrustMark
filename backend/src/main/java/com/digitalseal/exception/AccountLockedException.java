@@ -1,7 +1,6 @@
 package com.digitalseal.exception;
 
-public class AccountLockedException extends RuntimeException {
-    public AccountLockedException(String message) {
+// ...existing code...
         super(message);
     }
 }

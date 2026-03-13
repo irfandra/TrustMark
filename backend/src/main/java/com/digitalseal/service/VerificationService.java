@@ -1,22 +1,26 @@
 package com.digitalseal.service;
 
-import com.digitalseal.model.entity.User;
-import com.digitalseal.model.entity.VerificationCode;
-import com.digitalseal.model.entity.VerificationType;
-import com.digitalseal.repository.VerificationCodeRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.security.SecureRandom;
-import java.time.LocalDateTime;
+import com.digitalseal.model.entity.User;
+import com.digitalseal.model.entity.VerificationCode;
+import com.digitalseal.model.entity.VerificationType;
+import com.digitalseal.repository.VerificationCodeRepository;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class VerificationService {
+    
+    private static final SecureRandom RANDOM = new SecureRandom();
     
     private final VerificationCodeRepository verificationCodeRepository;
     
@@ -26,15 +30,12 @@ public class VerificationService {
     @Value("${app.verification.max-attempts}")
     private int maxAttempts;
     
-    private static final SecureRandom RANDOM = new SecureRandom();
-    
     /**
      * Generate a 6-digit verification code
      */
     @Transactional
     public String generateCode(User user, VerificationType type) {
-        // Invalidate any existing unused codes for this user and type
-        verificationCodeRepository.invalidateAllByUserAndType(user, type);
+        // ...existing code...
         
         String code = String.format("%06d", RANDOM.nextInt(1000000));
         
