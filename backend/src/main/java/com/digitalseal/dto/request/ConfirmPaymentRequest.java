@@ -9,6 +9,6 @@ import lombok.Data;
 public class ConfirmPaymentRequest {
     
     @NotBlank(message = "Payment transaction hash is required")
-    @Schema(description = "Blockchain transaction hash of the payment", example = "0xabc123...", required = true)
+    @Schema(description = "Blockchain transaction hash of the payment", example = "0xabc123...")
     private String paymentTxHash;
 }

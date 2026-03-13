@@ -12,7 +12,7 @@ public class CreateCollectionRequest {
     
     @NotBlank(message = "Collection name is required")
     @Size(min = 2, max = 255, message = "Collection name must be between 2 and 255 characters")
-    @Schema(description = "Collection name", example = "Spring 2026 Collection", required = true)
+    @Schema(description = "Collection name", example = "Spring 2026 Collection")
     private String collectionName;
     
     @Size(max = 1000, message = "Description must not exceed 1000 characters")

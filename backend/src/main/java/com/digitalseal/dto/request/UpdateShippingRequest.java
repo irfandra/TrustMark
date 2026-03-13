@@ -9,6 +9,6 @@ import lombok.Data;
 public class UpdateShippingRequest {
     
     @NotBlank(message = "Tracking number is required")
-    @Schema(description = "Shipping tracking number", example = "1Z999AA10123456784", required = true)
+    @Schema(description = "Shipping tracking number", example = "1Z999AA10123456784")
     private String trackingNumber;
 }

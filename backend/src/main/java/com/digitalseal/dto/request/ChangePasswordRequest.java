@@ -11,7 +11,7 @@ import lombok.Data;
 public class ChangePasswordRequest {
     
     @NotBlank(message = "Current password is required")
-    @Schema(description = "User's current password", example = "OldPass123!", required = true)
+    @Schema(description = "User's current password", example = "OldPass123!")
     private String currentPassword;
     
     @NotBlank(message = "New password is required")
@@ -21,6 +21,6 @@ public class ChangePasswordRequest {
         message = "Password must contain uppercase, lowercase, number and special character"
     )
     @Schema(description = "New password (min 8 chars, must include uppercase, lowercase, number, and special character)", 
-            example = "NewSecure456!", required = true)
+            example = "NewSecure456!")
     private String newPassword;
 }

@@ -13,7 +13,7 @@ public class CreateBrandRequest {
     
     @NotBlank(message = "Brand name is required")
     @Size(min = 2, max = 255, message = "Brand name must be between 2 and 255 characters")
-    @Schema(description = "Brand name", example = "Louis Vuitton", required = true)
+    @Schema(description = "Brand name", example = "Louis Vuitton")
     private String brandName;
     
     @Email(message = "Invalid company email format")

@@ -12,7 +12,7 @@ public class CreateProductRequest {
     
     @NotBlank(message = "Product name is required")
     @Size(min = 2, max = 255, message = "Product name must be between 2 and 255 characters")
-    @Schema(description = "Product name", example = "Louis Vuitton Speedy 30", required = true)
+    @Schema(description = "Product name", example = "Louis Vuitton Speedy 30")
     private String productName;
     
     @Size(max = 2000, message = "Description must not exceed 2000 characters")
@@ -20,12 +20,12 @@ public class CreateProductRequest {
     private String description;
     
     @NotNull(message = "Category is required")
-    @Schema(description = "Product category", example = "HANDBAG", required = true)
+    @Schema(description = "Product category", example = "HANDBAG")
     private ProductCategory category;
     
     @NotBlank(message = "SKU is required")
     @Size(max = 100, message = "SKU must not exceed 100 characters")
-    @Schema(description = "Stock Keeping Unit", example = "LV-SPEEDY-30-MONO", required = true)
+    @Schema(description = "Stock Keeping Unit", example = "LV-SPEEDY-30-MONO")
     private String sku;
     
     @Size(max = 100, message = "Serial number must not exceed 100 characters")

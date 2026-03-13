@@ -1,5 +1,11 @@
 package com.digitalseal.service;
 
+import java.time.LocalDateTime;
+
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.digitalseal.dto.request.EmailLoginRequest;
 import com.digitalseal.dto.request.EmailRegisterRequest;
 import com.digitalseal.dto.request.ForgotPasswordRequest;
@@ -8,7 +14,7 @@ import com.digitalseal.dto.request.VerifyEmailRequest;
 import com.digitalseal.dto.request.WalletLoginRequest;
 import com.digitalseal.dto.request.WalletRegisterRequest;
 import com.digitalseal.dto.response.AuthResponse;
-import com.digitalseal.dto.response.UserResponse;
+// ...existing code...
 import com.digitalseal.exception.AccountLockedException;
 import com.digitalseal.exception.InvalidCredentialsException;
 import com.digitalseal.exception.InvalidSignatureException;
@@ -21,13 +27,9 @@ import com.digitalseal.model.entity.VerificationType;
 import com.digitalseal.repository.UserRepository;
 import com.digitalseal.security.JwtTokenProvider;
 import com.digitalseal.util.SignatureVerifier;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
 
 @Service
 @Slf4j

@@ -13,7 +13,7 @@ public class EmailRegisterRequest {
     
     @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")
-    @Schema(description = "User's email address", example = "john.doe@example.com", required = true)
+    @Schema(description = "User's email address", example = "john.doe@example.com")
     private String email;
     
     @NotBlank(message = "Password is required")
@@ -23,6 +23,6 @@ public class EmailRegisterRequest {
         message = "Password must contain uppercase, lowercase, number and special character"
     )
     @Schema(description = "User's password (min 8 chars, must include uppercase, lowercase, number, and special character)", 
-            example = "SecurePass123!", required = true)
+            example = "SecurePass123!")
     private String password;
 }

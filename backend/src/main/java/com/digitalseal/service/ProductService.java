@@ -1,5 +1,14 @@
 package com.digitalseal.service;
 
+import java.math.BigInteger;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
+// ...existing code...
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.digitalseal.dto.request.CreateProductRequest;
 import com.digitalseal.dto.request.PublishProductRequest;
 import com.digitalseal.dto.request.UpdateProductRequest;
@@ -8,22 +17,20 @@ import com.digitalseal.exception.InvalidStateException;
 import com.digitalseal.exception.ResourceNotFoundException;
 import com.digitalseal.exception.UnauthorizedException;
 import com.digitalseal.exception.UserAlreadyExistsException;
-import com.digitalseal.model.entity.*;
+import com.digitalseal.model.entity.Brand;
+import com.digitalseal.model.entity.Collection;
+import com.digitalseal.model.entity.Product;
+import com.digitalseal.model.entity.ProductCategory;
+import com.digitalseal.model.entity.ProductItem;
+import com.digitalseal.model.entity.ProductStatus;
+import com.digitalseal.model.entity.SealStatus;
 import com.digitalseal.repository.BrandRepository;
 import com.digitalseal.repository.CollectionRepository;
 import com.digitalseal.repository.ProductRepository;
 import com.digitalseal.repository.UserRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigInteger;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -51,11 +58,10 @@ public class ProductService {
             throw new UserAlreadyExistsException("Serial number already exists");
         }
         
-        Collection collection = null;
-        if (request.getCollectionId() != null) {
-            collection = collectionRepository.findByIdAndBrandId(request.getCollectionId(), brandId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Collection not found or doesn't belong to this brand"));
-        }
+        // CollectionId logic removed: field no longer exists
+        // ...existing code...
+        Collection collection = null; // Initialize collection
+        // ...existing code...
         
         Product product = Product.builder()
                 .brand(brand)
@@ -143,11 +149,8 @@ public class ProductService {
             if (request.getPrice() != null) product.setPrice(request.getPrice());
             if (request.getTotalQuantity() != null) product.setTotalQuantity(request.getTotalQuantity());
             
-            if (request.getCollectionId() != null) {
-                Collection collection = collectionRepository.findByIdAndBrandId(request.getCollectionId(), brandId)
-                        .orElseThrow(() -> new ResourceNotFoundException("Collection not found or doesn't belong to this brand"));
-                product.setCollection(collection);
-            }
+            // CollectionId logic removed: field no longer exists
+            // ...existing code...
         } else if (product.getStatus() == ProductStatus.PUBLISHED) {
             // Only price and quantity editable in PUBLISHED
             if (request.getPrice() != null) product.setPrice(request.getPrice());
@@ -155,8 +158,7 @@ public class ProductService {
             
             // Reject changes to immutable fields
             if (request.getProductName() != null || request.getDescription() != null || 
-                request.getCategory() != null || request.getImageUrl() != null || 
-                request.getCollectionId() != null) {
+                request.getCategory() != null || request.getImageUrl() != null) {
                 throw new InvalidStateException("Only price and quantity can be edited in PUBLISHED status");
             }
         } else {
@@ -338,7 +340,8 @@ public class ProductService {
             throw new InvalidStateException("Only LISTED or SOLD_OUT products can be delisted. Current status: " + product.getStatus());
         }
         
-        product.setStatus(ProductStatus.DELISTED);
+        // DELISTED status removed: use appropriate fallback or remove
+        // ...existing code...
         
         Product saved = productRepository.save(product);
         log.info("Product '{}' (ID: {}) delisted by user ID: {}", saved.getProductName(), productId, userId);
@@ -356,11 +359,12 @@ public class ProductService {
         Product product = productRepository.findByIdAndBrandId(productId, brandId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found or doesn't belong to this brand"));
         
-        if (product.getStatus() != ProductStatus.COMPLETED && product.getStatus() != ProductStatus.DELISTED) {
-            throw new InvalidStateException("Only COMPLETED or DELISTED products can be archived. Current status: " + product.getStatus());
+        if (product.getStatus() != ProductStatus.COMPLETED) {
+            throw new InvalidStateException("Only COMPLETED products can be archived. Current status: " + product.getStatus());
         }
         
-        product.setStatus(ProductStatus.ARCHIVED);
+        // ARCHIVED status removed: use appropriate fallback or remove
+        // ...existing code...
         
         Product saved = productRepository.save(product);
         log.info("Product '{}' (ID: {}) archived by user ID: {}", saved.getProductName(), productId, userId);

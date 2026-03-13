@@ -11,11 +11,11 @@ import lombok.Data;
 public class PublishProductRequest {
     
     @NotNull(message = "Price is required to publish")
-    @Schema(description = "Price per unit", example = "0.5", required = true)
+    @Schema(description = "Price per unit", example = "0.5")
     private BigDecimal price;
     
     @NotNull(message = "Total quantity is required to publish")
-    @Schema(description = "Total quantity of items", example = "100", required = true)
+    @Schema(description = "Total quantity of items", example = "100")
     private Integer totalQuantity;
     
     @Schema(description = "Optional listing deadline", example = "2026-06-01T00:00:00")

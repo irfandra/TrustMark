@@ -11,6 +11,6 @@ public class VerifyEmailRequest {
     
     @NotBlank(message = "Verification code is required")
     @Pattern(regexp = "^\\d{6}$", message = "Code must be exactly 6 digits")
-    @Schema(description = "6-digit verification code sent to email", example = "123456", required = true)
+    @Schema(description = "6-digit verification code sent to email", example = "123456")
     private String code;
 }

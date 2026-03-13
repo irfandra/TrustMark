@@ -11,6 +11,6 @@ public class ForgotPasswordRequest {
     
     @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")
-    @Schema(description = "Email address of the account", example = "john.doe@example.com", required = true)
+    @Schema(description = "Email address of the account", example = "john.doe@example.com")
     private String email;
 }
