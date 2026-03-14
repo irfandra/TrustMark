@@ -1,9 +1,5 @@
 package com.digitalseal.service;
 
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -11,12 +7,16 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class EmailService {
-    
-    private final JavaMailSender mailSender;
+        private final JavaMailSender mailSender;
     
     @Value("${app.mail.from}")
     private String fromEmail;
@@ -25,13 +25,41 @@ public class EmailService {
     private String fromName;
     
     /**
+     * General-purpose email sender (plain or HTML)
+     * @param toEmail Recipient email address
+     * @param subject Email subject
+     * @param content Email content (plain or HTML)
+     * @param isHtml True for HTML, false for plain text
+     */
+    @Async
+    public void sendEmail(String toEmail, String subject, String content, boolean isHtml) {
+        log.info("[EMAIL] Sending '{}' to: {} (from: {})", subject, toEmail, fromEmail);
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(fromEmail, fromName);
+            helper.setTo(toEmail);
+            helper.setSubject(subject);
+            helper.setText(content, isHtml);
+            mailSender.send(message);
+            log.info("[EMAIL] Sent successfully to: {}", toEmail);
+        } catch (MailException e) {
+            log.error("[EMAIL] Spring Mail failure sending to {}: {}", toEmail, e.getMessage());
+            throw new RuntimeException("Failed to send email: " + e.getMessage(), e);
+        } catch (MessagingException | java.io.UnsupportedEncodingException e) {
+            log.error("[EMAIL] MIME error sending to {}: {}", toEmail, e.getMessage());
+            throw new RuntimeException("Failed to send email", e);
+        }
+    }
+    
+    /**
      * Send email verification code
      */
     @Async
     public void sendVerificationEmail(String toEmail, String code, String firstName) {
         String subject = "Digital Seal - Verify Your Email";
         String content = buildVerificationEmailContent(code, firstName);
-        sendHtmlEmail(toEmail, subject, content);
+        sendEmail(toEmail, subject, content, true);
     }
     
     /**
@@ -41,31 +69,10 @@ public class EmailService {
     public void sendPasswordResetEmail(String toEmail, String code, String firstName) {
         String subject = "Digital Seal - Password Reset";
         String content = buildPasswordResetEmailContent(code, firstName);
-        sendHtmlEmail(toEmail, subject, content);
+        sendEmail(toEmail, subject, content, true);
     }
     
-    private void sendHtmlEmail(String to, String subject, String htmlContent) {
-        log.info("[EMAIL] Attempting to send '{}' to: {} (from: {})", subject, to, fromEmail);
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail, fromName);
-            helper.setTo(to);
-            helper.setSubject(subject);
-            helper.setText(htmlContent, true);
-
-            mailSender.send(message);
-            log.info("[EMAIL] Sent successfully to: {}", to);
-        } catch (MailException e) {
-            // Covers MailAuthenticationException, MailSendException, etc.
-            log.error("[EMAIL] Spring Mail failure sending to {}: {}", to, e.getMessage());
-            throw new RuntimeException("Failed to send email: " + e.getMessage(), e);
-        } catch (MessagingException | java.io.UnsupportedEncodingException e) {
-            log.error("[EMAIL] MIME error sending to {}: {}", to, e.getMessage());
-            throw new RuntimeException("Failed to send email", e);
-        }
-    }
+    // sendHtmlEmail removed; use sendEmail for all email sending
     
     private String buildVerificationEmailContent(String code, String firstName) {
         String name = (firstName != null && !firstName.isBlank()) ? firstName : "there";

@@ -1,38 +1,50 @@
 package com.digitalseal.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
+import java.math.BigInteger;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.web3j.abi.FunctionEncoder;
 import org.web3j.abi.FunctionReturnDecoder;
 import org.web3j.abi.TypeReference;
-import org.web3j.abi.datatypes.*;
+import org.web3j.abi.datatypes.Address;
+import org.web3j.abi.datatypes.Bool;
+import org.web3j.abi.datatypes.DynamicArray;
+import org.web3j.abi.datatypes.Function;
+import org.web3j.abi.datatypes.Type;
+import org.web3j.abi.datatypes.Utf8String;
 import org.web3j.abi.datatypes.generated.Uint256;
 import org.web3j.crypto.Credentials;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameterName;
 import org.web3j.protocol.core.methods.request.Transaction;
-import org.web3j.protocol.core.methods.response.*;
+import org.web3j.protocol.core.methods.response.EthCall;
+import org.web3j.protocol.core.methods.response.EthGetTransactionReceipt;
+import org.web3j.protocol.core.methods.response.EthSendTransaction;
+import org.web3j.protocol.core.methods.response.TransactionReceipt;
 import org.web3j.tx.RawTransactionManager;
 import org.web3j.tx.TransactionManager;
 import org.web3j.tx.gas.ContractGasProvider;
 
 import jakarta.annotation.PostConstruct;
-import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
 public class BlockchainService {
 
+    public record BatchMintResult(String txHash, BigInteger blockNumber, BigInteger startTokenId) {}
+    public record VerifyResult(
+        boolean exists, String serial, String brand, String currentOwner,
+        boolean isSold, boolean isClaimed, long mintedAt, String metadataURI
+    ) {}
     private final Web3j web3j;
+
     private final Credentials credentials;
+
     private final ContractGasProvider gasProvider;
 
     @Value("${web3.contract.address:}")
@@ -49,6 +61,8 @@ public class BlockchainService {
         this.gasProvider = gasProvider;
     }
 
+    // ========== BATCH PRE-MINT ==========
+
     @PostConstruct
     public void init() {
         try {
@@ -64,11 +78,20 @@ public class BlockchainService {
         }
     }
 
+    // ========== PURCHASE ITEM ==========
+
+    /**
+     * Not called from backend directly — buyer calls purchaseItem on-chain via their wallet (MetaMask).
+     * This is handled client-side. Backend only records the tx hash.
+     */
+
+    // ========== TRANSFER TOKEN ==========
+
     public boolean isAvailable() {
         return blockchainAvailable;
     }
 
-    // ========== BATCH PRE-MINT ==========
+    // ========== VERIFY ==========
 
     /**
      * Batch pre-mint NFTs on the blockchain.
@@ -176,14 +199,7 @@ public class BlockchainService {
         }
     }
 
-    // ========== PURCHASE ITEM ==========
-
-    /**
-     * Not called from backend directly — buyer calls purchaseItem on-chain via their wallet (MetaMask).
-     * This is handled client-side. Backend only records the tx hash.
-     */
-
-    // ========== TRANSFER TOKEN ==========
+    // ========== AUTHORIZE BRAND ==========
 
     /**
      * Transfer an NFT from the platform wallet to a recipient (purchase or claim).
@@ -237,7 +253,7 @@ public class BlockchainService {
         }
     }
 
-    // ========== VERIFY ==========
+    // ========== HELPERS ==========
 
     /**
      * Verify a token on-chain (read-only call).
@@ -298,8 +314,6 @@ public class BlockchainService {
         }
     }
 
-    // ========== AUTHORIZE BRAND ==========
-
     public String authorizeBrand(String brandWallet, boolean authorized) {
         if (!blockchainAvailable) {
             return null;
@@ -339,7 +353,7 @@ public class BlockchainService {
         }
     }
 
-    // ========== HELPERS ==========
+    // ========== RESULT RECORDS ==========
 
     private BigInteger getTotalSupply() throws Exception {
         Function function = new Function("totalSupply", Collections.emptyList(),
@@ -373,13 +387,4 @@ public class BlockchainService {
         log.warn("Receipt not available after 30s for tx: {}", txHash);
         return null;
     }
-
-    // ========== RESULT RECORDS ==========
-
-    public record BatchMintResult(String txHash, BigInteger blockNumber, BigInteger startTokenId) {}
-
-    public record VerifyResult(
-        boolean exists, String serial, String brand, String currentOwner,
-        boolean isSold, boolean isClaimed, long mintedAt, String metadataURI
-    ) {}
 }

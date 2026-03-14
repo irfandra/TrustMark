@@ -14,7 +14,7 @@ spring:
     show-sql: true
     properties:
       hibernate:
-        format_sql: true
+        "format_sql": true
         dialect: org.hibernate.dialect.MySQL8Dialect
 
   flyway:
@@ -102,7 +102,7 @@ logging:
     # File: same pattern — grep by [CATEGORY] or level
     file: "%d{yyyy-MM-dd HH:mm:ss} %-5level --- %msg%n"
   level:
-    com.digitalseal: INFO
-    org.springframework.security: WARN
-    org.hibernate.SQL: WARN
-    org.flywaydb: INFO
+    "com.digitalseal": INFO
+    "org.springframework.security": WARN
+    "org.hibernate.SQL": WARN
+    "org.flywaydb": INFO

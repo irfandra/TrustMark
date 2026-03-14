@@ -1,5 +1,14 @@
 package com.digitalseal.service;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.UUID;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.digitalseal.dto.request.ConfirmPaymentRequest;
 import com.digitalseal.dto.request.CreateOrderRequest;
 import com.digitalseal.dto.request.UpdateShippingRequest;
@@ -7,20 +16,25 @@ import com.digitalseal.dto.response.OrderResponse;
 import com.digitalseal.exception.InvalidStateException;
 import com.digitalseal.exception.ResourceNotFoundException;
 import com.digitalseal.exception.UnauthorizedException;
-import com.digitalseal.model.entity.*;
-import com.digitalseal.repository.*;
+import com.digitalseal.model.entity.LogCategory;
+import com.digitalseal.model.entity.Order;
+import com.digitalseal.model.entity.OrderStatus;
+import com.digitalseal.model.entity.OwnershipHistory;
+import com.digitalseal.model.entity.Product;
+import com.digitalseal.model.entity.ProductItem;
+import com.digitalseal.model.entity.ProductStatus;
+import com.digitalseal.model.entity.SealStatus;
+import com.digitalseal.model.entity.TransferType;
+import com.digitalseal.model.entity.User;
+import com.digitalseal.repository.OrderRepository;
+import com.digitalseal.repository.OwnershipHistoryRepository;
+import com.digitalseal.repository.ProductItemRepository;
+import com.digitalseal.repository.ProductRepository;
+import com.digitalseal.repository.UserRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
