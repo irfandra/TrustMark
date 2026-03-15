@@ -1,9 +1,9 @@
 import { Image, Platform, StyleSheet } from 'react-native';
 
-import { ExternalLink } from '../../components/external-link';
-import ParallaxScrollView from '../../components/parallax-scroll-view';
-import { ThemedText } from '../../components/themed-text';
-import { ThemedView } from '../../components/themed-view';
+import { ExternalLink } from '../../components/shared/external-link';
+import ParallaxScrollView from '../../components/shared/parallax-scroll-view';
+import { ThemedText } from '../../components/shared/themed-text';
+import { ThemedView } from '../../components/shared/themed-view';
 import { Collapsible } from '../../components/ui/collapsible';
 import { IconSymbol } from '../../components/ui/icon-symbol';
 import { Fonts } from '../../constants/theme';
