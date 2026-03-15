@@ -91,3 +91,4 @@ coverage/
 *~
 # Copilot agent customizations
 .github/
+.DS_Store
