@@ -1,6 +1,6 @@
 import { useRole } from '../../components/context/RoleContext';
-import UserHome from '../../components/screens/user/home';
-import CompanyHome from '../../components/screens/company/home';
+import UserHome from '../(users)/home';
+import CompanyHome from '../(company)/home';
 
 export default function HomeScreen() {
   const { role } = useRole();

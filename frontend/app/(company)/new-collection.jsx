@@ -29,7 +29,7 @@ export default function NewCollection() {
         showsVerticalScrollIndicator={false}
       >
         {/* Back */}
-        <TouchableOpacity style={styles.backRow} onPress={() => {}}>
+        <TouchableOpacity style={styles.backRow} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={18} color="#111" />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>

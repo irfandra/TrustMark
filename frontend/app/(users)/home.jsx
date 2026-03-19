@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import TabRoleToggle from '../../ui/tab-role-toggle';
+import TabRoleToggle from '../../components/ui/tab-role-toggle';
 
 const { width: screenWidth } = Dimensions.get('window');
 const isTablet = screenWidth >= 768;

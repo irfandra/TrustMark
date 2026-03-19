@@ -19,6 +19,8 @@ const INITIAL_VARIATIONS = [
 ];
 
 export default function NewCollectionContinue() {
+  // Remove navigation header
+  NewCollectionContinue.navigationOptions = { headerShown: false };
   const [variations, setVariations] = useState(INITIAL_VARIATIONS);
   const router = useRouter();
 
@@ -50,7 +52,7 @@ export default function NewCollectionContinue() {
   const ListHeader = () => (
     <>
       {/* Back */}
-      <TouchableOpacity style={styles.backRow} onPress={() => {}}>
+      <TouchableOpacity style={styles.backRow} onPress={() => router.back()}>
         <Ionicons name="chevron-back" size={18} color="#111" />
         <Text style={styles.backText}>Back</Text>
       </TouchableOpacity>
