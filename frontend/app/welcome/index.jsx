@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ImageBackground,
@@ -36,7 +36,7 @@ const SLIDES = [
 export default function AuthLandingScreen() {
   const router = useRouter();
   const [currentSlide, setCurrentSlide] = useState(0);
-  
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -46,12 +46,14 @@ export default function AuthLandingScreen() {
         const SWIPE_THRESHOLD = 50;
 
         if (dx > SWIPE_THRESHOLD) {
-          setCurrentSlide(prev => prev === 0 ? SLIDES.length - 1 : prev - 1);
+          setCurrentSlide((prev) =>
+            prev === 0 ? SLIDES.length - 1 : prev - 1,
+          );
         } else if (dx < -SWIPE_THRESHOLD) {
-          setCurrentSlide(prev => (prev + 1) % SLIDES.length);
+          setCurrentSlide((prev) => (prev + 1) % SLIDES.length);
         }
       },
-    })
+    }),
   ).current;
 
   const timerRef = useRef(null);
@@ -59,7 +61,7 @@ export default function AuthLandingScreen() {
   const startAutoScroll = () => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
-      setCurrentSlide(prev => (prev + 1) % SLIDES.length);
+      setCurrentSlide((prev) => (prev + 1) % SLIDES.length);
     }, 4000);
   };
 
@@ -77,27 +79,30 @@ export default function AuthLandingScreen() {
   const slide = SLIDES[currentSlide];
 
   return (
-    <View style={styles.container} {...panResponder.panHandlers}>
-      <ImageBackground
-        source={{ uri: slide.image }}
-        style={styles.backgroundImage}
-      >
-        <View style={styles.topOverlay} />
-        <Text style={styles.appName}>ZEAL</Text>
-      </ImageBackground>
-      <View style={styles.whitePanel}>
+    <View style={styles.container}>
+      {/* Only carousel area responds to swipe */}
+      <View style={{ flex: 0.65 }} {...panResponder.panHandlers}>
+        <ImageBackground
+          source={{ uri: slide.image }}
+          style={styles.backgroundImage}
+        >
+          <View style={styles.topOverlay} />
+          <Text style={styles.appName}>ZEAL</Text>
+        </ImageBackground>
+      </View>
+
+      {/* White panel and buttons — NOT inside panResponder */}
+      <View style={styles.whitePanel} pointerEvents="none">
         <View style={styles.dotsContainer}>
           {SLIDES.map((_, index) => (
             <TouchableOpacity
               key={index}
               onPress={() => setCurrentSlide(index)}
               activeOpacity={0.7}
+              pointerEvents="auto" // ← Allow dots to work
             >
               <View
-                style={[
-                  styles.dot,
-                  index === currentSlide && styles.activeDot,
-                ]}
+                style={[styles.dot, index === currentSlide && styles.activeDot]}
               />
             </TouchableOpacity>
           ))}
@@ -107,16 +112,18 @@ export default function AuthLandingScreen() {
           <Text style={styles.mainText}>{slide.subtitle}</Text>
         </View>
       </View>
+
+      {/* Buttons are now clickable */}
       <View style={styles.stickyButtonsContainer}>
         <TouchableOpacity
           style={styles.loginButton}
-          onPress={() => router.push('/login')}
+          onPress={() => router.push("/(auth)/login")}
         >
           <Text style={styles.loginButtonText}>LOGIN</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.registerButton}
-          onPress={() => router.push('/register')}
+          onPress={() => router.push("/(auth)/register")}
         >
           <Text style={styles.registerButtonText}>Register</Text>
         </TouchableOpacity>
@@ -136,22 +143,22 @@ const styles = StyleSheet.create({
     paddingTop: 70,
   },
   appName: {
-    fontFamily: 'Inter',
+    fontFamily: "Inter",
     fontSize: 48,
-    fontWeight: '900',
-    color: 'white',
+    fontWeight: "900",
+    color: "white",
     letterSpacing: -9.6,
     marginTop: 10,
     marginLeft: 20,
     zIndex: 2,
   },
   topOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.35)',
+    backgroundColor: "rgba(0,0,0,0.35)",
     zIndex: 1,
   },
   whitePanel: {
