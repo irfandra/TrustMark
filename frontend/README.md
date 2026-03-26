@@ -293,7 +293,22 @@ truffle compile
 truffle migrate --network <network-name>
 truffle test
 ```
+# 1. Go to blockchain folder
+cd /Users/irfanrahmanindra/Documents/GitHub/The-Digital-Seal/blockchain
 
+# 2. Clear old files
+rm -rf node_modules package-lock.json
+
+# 3. Install dependencies
+npm install
+
+# 4. Verify
+npx hardhat --version
+# Should show: hardhat/X.X.X
+
+# 5. Run hardhat node
+npx hardhat node
+# Should start on http://127.0.0.1:8545
 ---
 
 ## IPFS / Pinata

@@ -152,16 +152,8 @@ public class AuthService {
             nonce = "nonce_" + System.currentTimeMillis() + "_" + Math.random();
         }
         
-        String message = String.format(
-            "Sign this message to authenticate with Digital Seal:\n\n" +
-            "Wallet: %s\n" +
-            "Nonce: %s\n" +
-            "Timestamp: %s\n\n" +
-            "This request will not trigger a blockchain transaction or cost any gas fees.",
-            walletAddress,
-            nonce,
-            LocalDateTime.now()
-        );
+        // Simplified message format to avoid encoding issues with timestamps
+        String message = "Sign this nonce to authenticate with Digital Seal: " + nonce;
         
         return AuthResponse.builder()
                 .nonce(nonce)

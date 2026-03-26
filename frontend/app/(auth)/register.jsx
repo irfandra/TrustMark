@@ -11,10 +11,26 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useWallet } from '../../components/context/WalletContext';
+
+import walletService from '../../services/walletService';
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { wallet, connectWallet, isConnecting, signMessage, selectWallet } = useWallet();
+
+  const getAPIBase = () => {
+    if (Platform.OS === "android") {
+      return "http://10.0.2.2:8080/api/v1";
+    }
+    return "http://127.0.0.1:8080/api/v1";
+  };
+
+  const API_BASE = getAPIBase();
 
   const [form, setForm] = useState({
     firstName: '',
@@ -28,9 +44,11 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [showWalletSelector, setShowWalletSelector] = useState(false);
 
   const [isPasswordValid, setIsPasswordValid] = useState(false);
   const [doPasswordsMatch, setDoPasswordsMatch] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Validate password & match
   useEffect(() => {
@@ -60,13 +78,104 @@ export default function RegisterScreen() {
     }));
   };
 
-  const handleRegister = () => {
-    console.log('Register pressed with:', form);
-    router.replace('/accountactivation');
+  const handleRegister = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+          firstName: form.firstName,
+          lastName: form.lastName,
+          username: form.userName,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        await AsyncStorage.setItem("accessToken", data.data.accessToken);
+        await AsyncStorage.setItem("refreshToken", data.data.refreshToken);
+        router.replace("/accountactivation");
+      } else {
+        Alert.alert("Error", data.error?.message || "Registration failed");
+      }
+    } catch (err) {
+      Alert.alert("Error", err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegisterWithWallet = async () => {
+    if (wallet?.address) {
+      // If wallet already selected, proceed with registration
+      await proceedWithWalletRegistration(wallet.address);
+    } else {
+      // Show wallet selector to choose from saved wallets
+      setShowWalletSelector(true);
+    }
+  };
+
+  // Handle wallet selection from the selector
+  const handleWalletSelected = async (address) => {
+    setShowWalletSelector(false);
+    // Proceed with registration using the selected wallet
+    await proceedWithWalletRegistration(address);
+  };
+
+  // Actual wallet registration logic
+  const proceedWithWalletRegistration = async (walletAddress) => {
+    setLoading(true);
+    try {
+      // Step 1: Get nonce from backend
+      const nonceData = await walletService.getWalletNonce(walletAddress);
+      if (!nonceData || !nonceData.message) {
+        Alert.alert("Error", "Failed to get nonce from server");
+        return;
+      }
+
+      const message = nonceData.message;
+      console.log('Got message to sign:', message);
+
+      // Step 2: Sign message
+      const signature = await signMessage(message, walletAddress);
+      if (!signature) {
+        Alert.alert("Signing Failed", "Message signing was cancelled or failed");
+        return;
+      }
+
+      console.log('Signature created:', signature);
+
+      // Step 3: Register using wallet service
+      const registerData = await walletService.registerWithWallet(
+        walletAddress,
+        signature,
+        message
+      );
+
+      // Step 4: Store tokens and navigate
+      await AsyncStorage.setItem("accessToken", registerData.accessToken);
+      await AsyncStorage.setItem("refreshToken", registerData.refreshToken);
+      if (registerData.user?.id) {
+        await AsyncStorage.setItem("userId", registerData.user.id);
+      }
+
+      router.replace("/(tabs)");
+    } catch (err) {
+      console.error("Wallet registration error:", err);
+      Alert.alert(
+        "Registration Failed",
+        err?.message || "Wallet registration failed"
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleConnectMetamask = () => {
-    console.log('Connect to Metamask pressed');
+    handleRegisterWithWallet();
   };
 
   const handleBack = () => {
@@ -112,17 +221,31 @@ export default function RegisterScreen() {
               Crypto Wallet<Text style={styles.asterisk}>*</Text>
             </Text>
             <TouchableOpacity
-              style={styles.metamaskButton}
+              style={[
+                styles.metamaskButton,
+                isConnecting && styles.metamaskButtonDisabled,
+              ]}
               onPress={handleConnectMetamask}
               activeOpacity={0.8}
+              disabled={isConnecting}
             >
-              <Text style={styles.metamaskText}>Connect to Metamask</Text>
-              <MaterialCommunityIcons
-                name="wallet"
-                size={28}
-                color="#F6851B"
-                style={styles.metamaskIcon}
-              />
+              {isConnecting ? (
+                <ActivityIndicator color="#F6851B" />
+              ) : (
+                <>
+                  <Text style={styles.metamaskText}>
+                    {wallet
+                      ? `Connected: ${wallet.address.slice(0, 6)}...`
+                      : "Connect to MetaMask"}
+                  </Text>
+                  <MaterialCommunityIcons
+                    name="wallet"
+                    size={28}
+                    color="#F6851B"
+                    style={styles.metamaskIcon}
+                  />
+                </>
+              )}
             </TouchableOpacity>
           </View>
 
@@ -280,13 +403,17 @@ export default function RegisterScreen() {
           <TouchableOpacity
             style={[
               styles.registerButton,
-              !allFieldsFilled && styles.registerButtonDisabled,
+              (!allFieldsFilled || loading) && styles.registerButtonDisabled,
             ]}
             activeOpacity={0.8}
             onPress={handleRegister}
-            disabled={!allFieldsFilled}
+            disabled={!allFieldsFilled || loading}
           >
-            <Text style={styles.registerButtonText}>REGISTER</Text>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.registerButtonText}>REGISTER</Text>
+            )}
           </TouchableOpacity>
 
           {/* Footer */}
@@ -301,6 +428,9 @@ export default function RegisterScreen() {
           </View>
         </KeyboardAvoidingView>
       </ScrollView>
+
+      {/* Wallet Selector Modal */}
+      
     </SafeAreaView>
   );
 }
@@ -375,6 +505,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     justifyContent: 'space-between',
     marginBottom: 8,
+  },
+  metamaskButtonDisabled: {
+    opacity: 0.6,
   },
   metamaskText: {
     fontSize: 17,
