@@ -8,40 +8,160 @@ const getAPIBase = () => {
 
 const API_BASE = getAPIBase();
 
-/**
- * Wallet Service - Handles all wallet-related API communications
- */
-export const walletService = {
+// ─── Helpers ────────────────────────────────────────────────────
+
+const getAuthHeaders = async () => {
+  const accessToken = await AsyncStorage.getItem('accessToken');
+  if (!accessToken) throw new Error('Not authenticated. Please login first.');
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${accessToken}`,
+  };
+};
+
+const handleResponse = async (response) => {
+  const data = await response.json();
+  console.log('RAW RESPONSE:', JSON.stringify(data, null, 2)); // ← add this
+  if (response.ok && data.success) {
+    return data.data;
+  }
+  throw new Error(data.error?.message || `Server error: ${response.status}`);
+};
+
+// ─── Auth Service ────────────────────────────────────────────────
+
+export const authService = {
+
   /**
-   * Fetch all wallets for a user from the backend
-   * @param {string} userId - The user ID or email to fetch wallets for
-   * @returns {Promise<Array>} Array of wallet objects
+   * Register a new user without wallet
+   */
+  async registerWithoutWallet(userData) {
+    try {
+      const response = await fetch(`${API_BASE}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: userData.firstName,
+          lastName: userData.lastName,
+          userName: userData.userName,
+          email: userData.email,
+          password: userData.password,
+        }),
+      });
+
+      return await handleResponse(response);
+    } catch (err) {
+      console.error('Error registering without wallet:', err);
+      throw err;
+    }
+  },
+
+  /**
+   * Login with email and password
+   */
+  async loginWithEmail(email, password) {
+    try {
+      const response = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      return await handleResponse(response);
+    } catch (err) {
+      console.error('Error logging in with email:', err);
+      throw err;
+    }
+  },
+};
+
+// ─── Wallet Service ──────────────────────────────────────────────
+
+export const walletService = {
+
+  /**
+   * Check whether a wallet address is already registered
+   */
+  async isWalletRegistered(address) {
+    try {
+      const response = await fetch(
+        `${API_BASE}/auth/wallet/check?address=${encodeURIComponent(address)}`
+      );
+      const data = await response.json();
+      if (!response.ok) throw new Error(`Server error: ${response.status}`);
+      return Boolean(data?.data?.isRegistered);
+    } catch (error) {
+      console.error('Error checking wallet registration:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get nonce for wallet signing
+   */
+  async getWalletNonce(address) {
+    try {
+      const response = await fetch(
+        `${API_BASE}/auth/wallet/nonce?address=${encodeURIComponent(address)}`
+      );
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Error getting nonce:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Login with wallet signature
+   */
+  async loginWithWallet(walletAddress, signature, message) {
+    try {
+      const response = await fetch(`${API_BASE}/auth/wallet/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletAddress, signature, message }),
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Error logging in with wallet:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Register with wallet
+   */
+  async registerWithWallet(walletAddress, signature, message, formData = {}) {
+    try {
+      const response = await fetch(`${API_BASE}/auth/wallet/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: formData.firstName || '',
+          lastName: formData.lastName || '',
+          userName: formData.userName || '',
+          walletAddress,
+          signature,
+          message,
+        }),
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('Error registering with wallet:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Fetch all wallets for a user
    */
   async getUserWallets(userId) {
     try {
-      const accessToken = await AsyncStorage.getItem('accessToken');
-      if (!accessToken) {
-        throw new Error('No access token found. User may not be authenticated.');
-      }
-
-      const response = await fetch(`${API_BASE}/wallets?userId=${encodeURIComponent(userId)}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (data.success) {
-        return data.data || [];
-      } else {
-        throw new Error(data.error?.message || 'Failed to fetch wallets');
-      }
+      const headers = await getAuthHeaders();
+      const response = await fetch(
+        `${API_BASE}/wallets?userId=${encodeURIComponent(userId)}`,
+        { headers }
+      );
+      return await handleResponse(response);
     } catch (error) {
       console.error('Error fetching wallets:', error);
       throw error;
@@ -50,31 +170,20 @@ export const walletService = {
 
   /**
    * Fetch a single wallet by address
-   * @param {string} address - Wallet address
-   * @returns {Promise<Object>} Wallet object with address, name, etc.
    */
   async getWalletByAddress(address) {
     try {
       const accessToken = await AsyncStorage.getItem('accessToken');
-      
-      const response = await fetch(`${API_BASE}/wallets/${encodeURIComponent(address)}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (data.success) {
-        return data.data;
-      } else {
-        throw new Error(data.error?.message || 'Failed to fetch wallet');
-      }
+      const response = await fetch(
+        `${API_BASE}/wallets/${encodeURIComponent(address)}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
+          },
+        }
+      );
+      return await handleResponse(response);
     } catch (error) {
       console.error('Error fetching wallet:', error);
       throw error;
@@ -83,39 +192,16 @@ export const walletService = {
 
   /**
    * Add a new wallet to the user's account
-   * @param {string} address - Wallet address
-   * @param {string} name - Optional wallet name/label
-   * @returns {Promise<Object>} Created wallet object
    */
-  async addWallet(address, name = null) {
+  async addWallet(address, name = 'My Wallet') {
     try {
-      const accessToken = await AsyncStorage.getItem('accessToken');
-      if (!accessToken) {
-        throw new Error('No access token found. User may not be authenticated.');
-      }
-
+      const headers = await getAuthHeaders();
       const response = await fetch(`${API_BASE}/wallets`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          address,
-          name: name || 'My Wallet',
-        }),
+        headers,
+        body: JSON.stringify({ address, name }),
       });
-
-      if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (data.success) {
-        return data.data;
-      } else {
-        throw new Error(data.error?.message || 'Failed to add wallet');
-      }
+      return await handleResponse(response);
     } catch (error) {
       console.error('Error adding wallet:', error);
       throw error;
@@ -123,137 +209,32 @@ export const walletService = {
   },
 
   /**
-   * Get nonce for wallet signing
-   * @param {string} address - Wallet address
-   * @returns {Promise<Object>} Object with nonce and message
+   * Get available wallets — always fetch fresh, no stale cache
    */
-  async getWalletNonce(address) {
+  async getAvailableWallets(forceRefresh = false) {
     try {
-      const response = await fetch(`${API_BASE}/auth/wallet/nonce?address=${encodeURIComponent(address)}`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
+      // Return cache only if not forcing refresh
+      if (!forceRefresh) {
+        const cached = await AsyncStorage.getItem('availableWallets');
+        if (cached) return JSON.parse(cached);
       }
 
-      const data = await response.json();
-      if (data.success) {
-        return data.data; // Returns { nonce, message }
-      } else {
-        throw new Error(data.error?.message || 'Failed to get nonce');
-      }
-    } catch (error) {
-      console.error('Error getting nonce:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Verify wallet signature and login
-   * @param {string} walletAddress - Wallet address
-   * @param {string} signature - Signed message
-   * @param {string} message - Original message that was signed
-   * @returns {Promise<Object>} Authentication response with tokens
-   */
-  async loginWithWallet(walletAddress, signature, message) {
-    try {
-      const response = await fetch(`${API_BASE}/auth/wallet/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          walletAddress,
-          signature,
-          message,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (data.success) {
-        return data.data; // Returns { accessToken, refreshToken, user }
-      } else {
-        throw new Error(data.error?.message || 'Wallet login failed');
-      }
-    } catch (error) {
-      console.error('Error logging in with wallet:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Register a new wallet
-   * @param {string} walletAddress - Wallet address
-   * @param {string} signature - Signed message
-   * @param {string} message - Original message that was signed
-   * @returns {Promise<Object>} Authentication response with tokens
-   */
-  async registerWithWallet(walletAddress, signature, message) {
-    try {
-      const response = await fetch(`${API_BASE}/auth/wallet/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          walletAddress,
-          signature,
-          message,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (data.success) {
-        return data.data; // Returns { accessToken, refreshToken, user }
-      } else {
-        throw new Error(data.error?.message || 'Wallet registration failed');
-      }
-    } catch (error) {
-      console.error('Error registering with wallet:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Get list of available wallets (for user to select from)
-   * This is used when signing transactions - user selects which wallet to use
-   * @returns {Promise<Array>} Array of available wallet addresses
-   */
-  async getAvailableWallets() {
-    try {
-      // Try to get from AsyncStorage first (cached)
-      const cached = await AsyncStorage.getItem('availableWallets');
-      if (cached) {
-        return JSON.parse(cached);
-      }
-
-      // Otherwise fetch from backend if user is authenticated
       const accessToken = await AsyncStorage.getItem('accessToken');
-      if (!accessToken) {
-        return [];
-      }
+      if (!accessToken) return [];
 
       const response = await fetch(`${API_BASE}/wallets/available`, {
-        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
         },
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.data) {
-          // Cache the result
-          await AsyncStorage.setItem('availableWallets', JSON.stringify(data.data));
-          return data.data;
-        }
+      if (!response.ok) return [];
+
+      const data = await response.json();
+      if (data.success && data.data) {
+        await AsyncStorage.setItem('availableWallets', JSON.stringify(data.data));
+        return data.data;
       }
       return [];
     } catch (error) {
@@ -261,6 +242,11 @@ export const walletService = {
       return [];
     }
   },
-};
 
-export default walletService;
+  /**
+   * Clear cached wallets (call after adding/removing wallets)
+   */
+  async clearWalletCache() {
+    await AsyncStorage.removeItem('availableWallets');
+  },
+};

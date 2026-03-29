@@ -1,5 +1,5 @@
 import 'react-native-get-random-values'; // ← must be first
-import '@walletconnect/react-native-compat'; // ← must be second
+import '@walletconnect/react-native-compat';
 import {
   DarkTheme,
   DefaultTheme,

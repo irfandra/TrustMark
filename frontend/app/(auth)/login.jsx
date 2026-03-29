@@ -17,10 +17,17 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useWallet } from "../../components/context/WalletContext";
+import { walletService } from "../../services/walletService";
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { wallet, connectWallet, isConnecting, signMessage } = useWallet();
+  const {
+    wallet,
+    connectWallet,
+    reconnectWallet,
+    isConnecting,
+    signMessage,
+  } = useWallet();
 
   const getAPIBase = () => {
     if (Platform.OS === "android") return "http://10.0.2.2:8080/api/v1";
@@ -77,17 +84,10 @@ const handleLoginWithWallet = async () => {
     }
 
     // Step 2: Check if address is registered in DB
-    const checkResponse = await fetch(
-      `${API_BASE}/auth/wallet/check?address=${activeWallet.address}`
-    );
-    if (!checkResponse.ok) {
-      Alert.alert("Error", `Server error: ${checkResponse.status}`);
-      return;
-    }
-    const checkData = await checkResponse.json();
+    const isRegistered = await walletService.isWalletRegistered(activeWallet.address);
 
     // ✅ Not registered → go to register with address pre-filled
-    if (!checkData.data.isRegistered) {
+    if (!isRegistered) {
       router.push({
         pathname: "/register",
         params: { walletAddress: activeWallet.address },
@@ -96,20 +96,8 @@ const handleLoginWithWallet = async () => {
     }
 
     // Step 3: Get nonce
-    const nonceResponse = await fetch(
-      `${API_BASE}/auth/wallet/nonce?address=${activeWallet.address}`
-    );
-    if (!nonceResponse.ok) {
-      Alert.alert("Error", `Server error: ${nonceResponse.status}`);
-      return;
-    }
-    const nonceData = await nonceResponse.json();
-    if (!nonceData.success) {
-      Alert.alert("Error", nonceData.error?.message || "Failed to get nonce");
-      return;
-    }
-
-    const message = nonceData.data.message;
+    const nonceData = await walletService.getWalletNonce(activeWallet.address);
+    const message = nonceData.message;
 
     // Step 4: Sign in MetaMask (real signing — no private key in app)
     const signature = await signMessage(message, activeWallet.address);
@@ -119,27 +107,17 @@ const handleLoginWithWallet = async () => {
     }
 
     // Step 5: Login
-    const loginResponse = await fetch(`${API_BASE}/auth/wallet/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        walletAddress: activeWallet.address,
-        signature,
-        message,
-      }),
-    });
-    if (!loginResponse.ok) {
-      Alert.alert("Error", `Server error: ${loginResponse.status}`);
-      return;
-    }
-
-    const loginData = await loginResponse.json();
-    if (loginData.success) {
-      await AsyncStorage.setItem("accessToken", loginData.data.accessToken);
-      await AsyncStorage.setItem("refreshToken", loginData.data.refreshToken);
+    const loginData = await walletService.loginWithWallet(
+      activeWallet.address,
+      signature,
+      message
+    );
+    if (loginData.accessToken && loginData.refreshToken) {
+      await AsyncStorage.setItem("accessToken", loginData.accessToken);
+      await AsyncStorage.setItem("refreshToken", loginData.refreshToken);
       router.replace("/(tabs)");
     } else {
-      Alert.alert("Error", loginData.error?.message || "Wallet login failed");
+      Alert.alert("Error", "Wallet login failed");
     }
 
   } catch (err) {
@@ -149,6 +127,15 @@ const handleLoginWithWallet = async () => {
     setLoading(false);
   }
 };
+
+  const handleSwitchAccountInMetaMask = async () => {
+    try {
+      await reconnectWallet();
+      Alert.alert("Account Updated", "Selected account has been updated from MetaMask.");
+    } catch (err) {
+      Alert.alert("Switch Account Failed", err?.message || "Unable to switch account in MetaMask.");
+    }
+  };
 
   const handleForgotPassword = () => router.push("/forgotpassword");
   const handleBack = () => router.back();
@@ -244,12 +231,15 @@ const handleLoginWithWallet = async () => {
             disabled={isConnecting || loading}
           >
             {isConnecting || loading ? (
-              <ActivityIndicator color="#F6851B" />
+              <View style={styles.walletConnectingWrap}>
+                <ActivityIndicator color="#F6851B" />
+                <Text style={styles.walletConnectingText}>Connecting to MetaMask...</Text>
+              </View>
             ) : (
               <>
                 <Text style={styles.metamaskText}>
-                  {wallet
-                    ? `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}`
+                  {wallet?.isConnected
+                    ? "Wallet Connected"
                     : "Login with MetaMask"}
                 </Text>
                 <MaterialCommunityIcons
@@ -262,6 +252,17 @@ const handleLoginWithWallet = async () => {
             )}
           </TouchableOpacity>
 
+          {wallet?.address && (
+            <TouchableOpacity
+              style={styles.switchAccountButton}
+              activeOpacity={0.8}
+              onPress={handleSwitchAccountInMetaMask}
+              disabled={isConnecting || loading}
+            >
+              <Text style={styles.switchAccountButtonText}>Switch Account in MetaMask</Text>
+            </TouchableOpacity>
+          )}
+
           {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>Don&apos;t have any account?</Text>
@@ -269,6 +270,7 @@ const handleLoginWithWallet = async () => {
               <Text style={styles.registerLink}>Register Account</Text>
             </Pressable>
           </View>
+
         </KeyboardAvoidingView>
       </ScrollView>
     </SafeAreaView>
@@ -370,6 +372,20 @@ const styles = StyleSheet.create({
   metamaskButtonDisabled: { opacity: 0.6 },
   metamaskText: { fontSize: 17, color: "#222", fontWeight: "500" },
   metamaskIcon: { marginLeft: 12 },
+  walletConnectingWrap: { flexDirection: "row", alignItems: "center", gap: 8 },
+  walletConnectingText: { fontSize: 14, color: "#444", fontWeight: "500" },
+  switchAccountButton: {
+    alignSelf: "flex-start",
+    marginTop: -18,
+    marginBottom: 24,
+    paddingVertical: 6,
+  },
+  switchAccountButtonText: {
+    color: "#111",
+    fontSize: 14,
+    fontWeight: "600",
+    textDecorationLine: "underline",
+  },
   footer: { alignItems: "center" },
   footerText: { fontSize: 14, color: "#888", marginBottom: 8 },
   registerLink: {

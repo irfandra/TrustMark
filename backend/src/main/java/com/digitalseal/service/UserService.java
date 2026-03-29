@@ -133,20 +133,20 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
     
-    public UserResponse mapToUserResponse(User user) {
-        return UserResponse.builder()
-                .id(user.getId())
-                .email(user.getEmail())
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .phoneNumber(user.getPhoneNumber())
-                .walletAddress(user.getWalletAddress())
-                .role(user.getRole().name())
-                .authType(user.getAuthType().name())
-                .emailVerified(user.getEmailVerified())
-                .walletVerified(user.getWalletVerified())
-                .createdAt(user.getCreatedAt())
-                .lastLoginAt(user.getLastLoginAt())
-                .build();
-    }
+   public UserResponse mapToUserResponse(User user) {
+    return UserResponse.builder()
+            .id(user.getId())
+            .email(user.getEmail())
+            .firstName(user.getFirstName())    // ← add
+            .lastName(user.getLastName())      // ← add     // ← add
+            .phoneNumber(user.getPhoneNumber())
+            .walletAddress(user.getWalletAddress())
+            .role(user.getRole() != null ? user.getRole().name() : null)
+            .authType(user.getAuthType() != null ? user.getAuthType().name() : null)
+            .emailVerified(user.getEmailVerified())
+            .walletVerified(user.getWalletVerified())
+            .createdAt(user.getCreatedAt())
+            .lastLoginAt(user.getLastLoginAt())
+            .build();
+}
 }

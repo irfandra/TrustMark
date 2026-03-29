@@ -34,4 +34,7 @@ public class AuthResponse {
     @Schema(description = "Message to be signed by wallet (only for nonce requests)", 
             example = "Sign this message to authenticate with Digital Seal: a1b2c3d4e5f6g7h8i9j0")
     private String message;
+
+    @Schema(description = "Whether wallet address is already registered (only for wallet check requests)", example = "true")
+    private Boolean isRegistered;
 }

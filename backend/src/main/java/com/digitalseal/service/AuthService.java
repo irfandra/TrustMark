@@ -59,6 +59,9 @@ public class AuthService {
         
         // Create user
         User user = User.builder()
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .userName(request.getUserName())
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .authType(AuthType.EMAIL)
@@ -69,6 +72,7 @@ public class AuthService {
                 .build();
         
         User savedUser = userRepository.save(user);
+        
         log.info("User registered successfully with ID: {}", savedUser.getId());
         
         // Send verification email
@@ -139,6 +143,19 @@ public class AuthService {
     /**
      * Get nonce for wallet authentication
      */
+    public AuthResponse checkWalletRegistration(String walletAddress) {
+        log.info("Checking wallet registration status: {}", walletAddress);
+
+        boolean isRegistered = userRepository.existsByWalletAddress(walletAddress);
+
+        return AuthResponse.builder()
+                .isRegistered(isRegistered)
+                .build();
+    }
+
+    /**
+     * Get nonce for wallet authentication
+     */
     public AuthResponse getWalletNonce(String walletAddress) {
         log.info("Nonce request for wallet: {}", walletAddress);
         
@@ -186,6 +203,9 @@ public class AuthService {
         
         // Create user
         User user = User.builder()
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .userName(request.getUserName())
                 .walletAddress(request.getWalletAddress())
                 .authType(AuthType.WALLET)
                 .role(UserRole.OWNER)

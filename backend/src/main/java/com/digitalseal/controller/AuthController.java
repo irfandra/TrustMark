@@ -101,6 +101,32 @@ public class AuthController {
     }
     
     @Operation(
+            summary = "Check wallet registration status",
+            description = "Check if a wallet address is already registered in the database."
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Wallet status checked successfully"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid wallet address"
+            )
+    })
+    @GetMapping("/wallet/check")
+    public ResponseEntity<ApiResponse<AuthResponse>> checkWalletRegistration(
+            @Parameter(description = "Ethereum wallet address (0x...)", example = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb")
+            @RequestParam String address) {
+
+        log.info("Wallet registration check request: {}", address);
+
+        AuthResponse response = authService.checkWalletRegistration(address);
+
+        return ResponseEntity.ok(ApiResponse.success(response, "Wallet status checked"));
+    }
+
+    @Operation(
             summary = "Get nonce for wallet authentication",
             description = "Generate a unique nonce for wallet signature verification. The nonce must be signed by the wallet to complete authentication."
     )

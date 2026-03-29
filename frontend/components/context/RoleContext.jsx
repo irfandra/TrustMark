@@ -11,7 +11,8 @@ export const useRole = () => {
 };
 
 export const RoleProvider = ({ children }) => {
-  const [role, setRole] = useState('user');
+  // const [role, setRole] = useState('user');
+  const [role, setRole] = useState('company');
 
   return (
     <RoleContext.Provider value={{ role, setRole }}>
