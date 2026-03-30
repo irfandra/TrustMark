@@ -17,8 +17,8 @@ import lombok.NoArgsConstructor;
 @Schema(description = "Product information response")
 public class ProductResponse {
     
-    @Schema(description = "Product ID", example = "1")
-    private Long id;
+    @Schema(description = "Product ID", example = "A1B2C3")
+    private String id;
     
     @Schema(description = "Brand ID", example = "1")
     private Long brandId;
@@ -41,21 +41,12 @@ public class ProductResponse {
     @Schema(description = "Product category", example = "HANDBAG")
     private ProductCategory category;
     
-    @Schema(description = "Stock Keeping Unit", example = "LV-SPEEDY-30-MONO")
-    private String sku;
-    
-    @Schema(description = "Serial number", example = "SN-2026-00001")
-    private String serialNumber;
-    
     @Schema(description = "Product image URL", example = "https://example.com/product.png")
     private String imageUrl;
     
     // Pricing
     @Schema(description = "Price per unit", example = "0.5")
     private BigDecimal price;
-    
-    @Schema(description = "Currency", example = "MATIC")
-    private String currency;
     
     // Quantity
     @Schema(description = "Total quantity to produce", example = "100")

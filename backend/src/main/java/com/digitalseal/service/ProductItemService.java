@@ -45,8 +45,8 @@ public class ProductItemService {
     /**
      * Get all items for a product
      */
-    public List<ProductItemResponse> getItemsByProduct(Long productId) {
-        return productItemRepository.findByProductId(productId).stream()
+        public List<ProductItemResponse> getItemsByProduct(String productId) {
+                return productItemRepository.findByProductProductCodeOrderByItemIndexAsc(productId).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -306,16 +306,20 @@ public class ProductItemService {
     private ProductItemResponse mapToResponse(ProductItem item) {
         return ProductItemResponse.builder()
                 .id(item.getId())
-                .productId(item.getProduct().getId())
+                .productId(item.getProduct().getProductCode())
                 .productName(item.getProduct().getProductName())
                 .itemSerial(item.getItemSerial())
                 .itemIndex(item.getItemIndex())
                 .tokenId(item.getTokenId())
                 .metadataUri(item.getMetadataUri())
                 .mintTxHash(item.getMintTxHash())
+                .nftQrCode(item.getNftQrCode())
+                .productLabelQrCode(item.getProductLabelQrCode())
+                .certificateQrCode(item.getCertificateQrCode())
                 .sealStatus(item.getSealStatus())
                 .currentOwnerWallet(item.getCurrentOwnerWallet())
                 .currentOwnerId(item.getCurrentOwner() != null ? item.getCurrentOwner().getId() : null)
+                .currentOwnerUsername(item.getCurrentOwner() != null ? item.getCurrentOwner().getUserName() : null)
                 .mintedAt(item.getMintedAt())
                 .soldAt(item.getSoldAt())
                 .claimedAt(item.getClaimedAt())

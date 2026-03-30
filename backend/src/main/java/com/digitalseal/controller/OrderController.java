@@ -40,7 +40,7 @@ public class OrderController {
     @PostMapping("/products/{productId}")
     public ResponseEntity<ApiResponse<OrderResponse>> createOrder(
             Authentication authentication,
-            @PathVariable Long productId,
+            @PathVariable String productId,
             @Valid @RequestBody CreateOrderRequest request) {
         Long userId = Long.parseLong(authentication.getName());
         OrderResponse response = orderService.createOrder(userId, productId, request);
@@ -106,7 +106,7 @@ public class OrderController {
     // Brand Actions (Fulfillment)
     // ========================
     
-    @Operation(summary = "Process order", description = "Brand begins processing a paid order. PAYMENT_RECEIVED → PROCESSING.")
+    @Operation(summary = "Process order", description = "Brand accepts collector request and begins processing. Supports PENDING (auto payment accept with buyer wallet) or PAYMENT_RECEIVED → PROCESSING.")
     @PostMapping("/{orderId}/process")
     public ResponseEntity<ApiResponse<OrderResponse>> processOrder(
             Authentication authentication,
@@ -144,7 +144,7 @@ public class OrderController {
     @GetMapping("/product/{productId}")
     public ResponseEntity<ApiResponse<Page<OrderResponse>>> getOrdersByProduct(
             Authentication authentication,
-            @PathVariable Long productId,
+            @PathVariable String productId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         Long userId = Long.parseLong(authentication.getName());

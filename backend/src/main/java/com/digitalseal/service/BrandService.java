@@ -50,6 +50,12 @@ public class BrandService {
                 .companyAddress(request.getCompanyAddress())
                 .companyWalletAddress(request.getCompanyWalletAddress())
                 .logo(request.getLogo())
+            .companyBanner(request.getCompanyBanner())
+            .statementLetterUrl(request.getStatementLetterUrl())
+            .personInChargeName(request.getPersonInChargeName())
+            .personInChargeRole(request.getPersonInChargeRole())
+            .personInChargeEmail(request.getPersonInChargeEmail())
+            .personInChargePhone(request.getPersonInChargePhone())
                 .description(request.getDescription())
                 .verified(false)
                 .build();
@@ -124,6 +130,30 @@ public class BrandService {
         if (request.getLogo() != null) {
             brand.setLogo(request.getLogo());
         }
+
+        if (request.getCompanyBanner() != null) {
+            brand.setCompanyBanner(request.getCompanyBanner());
+        }
+
+        if (request.getStatementLetterUrl() != null) {
+            brand.setStatementLetterUrl(request.getStatementLetterUrl());
+        }
+
+        if (request.getPersonInChargeName() != null) {
+            brand.setPersonInChargeName(request.getPersonInChargeName());
+        }
+
+        if (request.getPersonInChargeRole() != null) {
+            brand.setPersonInChargeRole(request.getPersonInChargeRole());
+        }
+
+        if (request.getPersonInChargeEmail() != null) {
+            brand.setPersonInChargeEmail(request.getPersonInChargeEmail());
+        }
+
+        if (request.getPersonInChargePhone() != null) {
+            brand.setPersonInChargePhone(request.getPersonInChargePhone());
+        }
         
         if (request.getDescription() != null) {
             brand.setDescription(request.getDescription());
@@ -179,6 +209,12 @@ public class BrandService {
                 .companyAddress(brand.getCompanyAddress())
                 .companyWalletAddress(brand.getCompanyWalletAddress())
                 .logo(brand.getLogo())
+                .companyBanner(brand.getCompanyBanner())
+                .statementLetterUrl(brand.getStatementLetterUrl())
+                .personInChargeName(brand.getPersonInChargeName())
+                .personInChargeRole(brand.getPersonInChargeRole())
+                .personInChargeEmail(brand.getPersonInChargeEmail())
+                .personInChargePhone(brand.getPersonInChargePhone())
                 .description(brand.getDescription())
                 .verified(brand.getVerified())
                 .ownerId(brand.getUser().getId())

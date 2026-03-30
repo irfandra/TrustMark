@@ -67,7 +67,7 @@ services:
       - "8080:8080"
     environment:
       DB_USERNAME: ${DB_USERNAME:-root}
-      DB_PASSWORD: ${DB_PASSWORD:-password}
+      DB_PASSWORD: ${DB_PASSWORD:-ds_password}
       JWT_SECRET: ${JWT_SECRET:-your-256-bit-secret-key-change-this-in-production-12345678901234567890}
       WEB3_RPC_URL: ${WEB3_RPC_URL:-http://localhost:8545}
       CONTRACT_ADDRESS: ${CONTRACT_ADDRESS:-}

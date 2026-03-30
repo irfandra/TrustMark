@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Dimensions, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View} from "react-native";
+import { Alert, Dimensions, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View} from "react-native";
 
 const { width: screenWidth } = Dimensions.get("window");
 const isTablet = screenWidth >= 768;
@@ -19,8 +19,52 @@ export default function NewCollection() {
   const [collectionName, setCollectionName]     = useState("");
   const [category, setCategory]                 = useState("");
   const [about, setAbout]                       = useState("");
+  const [imageUrl, setImageUrl]                 = useState("");
   const [totalItems, setTotalItems]             = useState("");
   const [selectedRarity, setSelectedRarity]     = useState("Rare");
+  const [errors, setErrors]                     = useState({});
+
+  const handleContinue = () => {
+    const nextErrors = {};
+
+    const safeName = collectionName.trim();
+    const safeCategory = category.trim();
+    const safeAbout = about.trim();
+    const totalItemsNumber = Number(String(totalItems).replace(/[^0-9]/g, ""));
+
+    if (safeName.length < 2) {
+      nextErrors.collectionName = "Collection name must be at least 2 characters";
+    }
+    if (!safeCategory) {
+      nextErrors.category = "Collection category is required";
+    }
+    if (safeAbout.length < 10) {
+      nextErrors.about = "About the collection must be at least 10 characters";
+    }
+    if (!Number.isInteger(totalItemsNumber) || totalItemsNumber <= 0) {
+      nextErrors.totalItems = "Total produced items must be a positive number";
+    }
+
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      Alert.alert("Validation Error", "Please complete all required fields before continuing.");
+      return;
+    }
+
+    router.push({
+      pathname: '/(tabs)/(creator)/new-collection-continue',
+      params: {
+        setupData: JSON.stringify({
+          collectionName: safeName,
+          category: safeCategory,
+          about: safeAbout,
+          imageUrl: imageUrl.trim(),
+          totalItems: totalItemsNumber,
+          rarity: selectedRarity,
+        }),
+      },
+    });
+  };
 
   return (
     <View style={styles.container}>
@@ -65,8 +109,12 @@ export default function NewCollection() {
           placeholder="Collection Name"
           placeholderTextColor="#888"
           value={collectionName}
-          onChangeText={setCollectionName}
+          onChangeText={(value) => {
+            setCollectionName(value);
+            setErrors((prev) => ({ ...prev, collectionName: undefined }));
+          }}
         />
+        {!!errors.collectionName && <Text style={styles.errorText}>{errors.collectionName}</Text>}
 
         {/* Collection Category */}
         <TextInput
@@ -74,8 +122,12 @@ export default function NewCollection() {
           placeholder="Collection Category (ex. Luxury Bags)"
           placeholderTextColor="#888"
           value={category}
-          onChangeText={setCategory}
+          onChangeText={(value) => {
+            setCategory(value);
+            setErrors((prev) => ({ ...prev, category: undefined }));
+          }}
         />
+        {!!errors.category && <Text style={styles.errorText}>{errors.category}</Text>}
 
         {/* About the Collection */}
         <TextInput
@@ -83,17 +135,24 @@ export default function NewCollection() {
           placeholder="About the Collection"
           placeholderTextColor="#888"
           value={about}
-          onChangeText={setAbout}
+          onChangeText={(value) => {
+            setAbout(value);
+            setErrors((prev) => ({ ...prev, about: undefined }));
+          }}
           multiline
           numberOfLines={4}
           textAlignVertical="top"
         />
+        {!!errors.about && <Text style={styles.errorText}>{errors.about}</Text>}
 
-        {/* Collection Banner Image */}
-        <TouchableOpacity style={styles.imagePicker} onPress={() => {}}>
-          <Text style={styles.imagePickerLabel}>Collection Banner Image</Text>
-          <Ionicons name="image-outline" size={36} color="#aaa" style={{ marginTop: 8 }} />
-        </TouchableOpacity>
+        {/* Collection Banner Image URL */}
+        <TextInput
+          style={styles.input}
+          placeholder="Collection Banner Image URL (optional)"
+          placeholderTextColor="#888"
+          value={imageUrl}
+          onChangeText={setImageUrl}
+        />
 
         {/* Total Produced Items */}
         <TextInput
@@ -102,8 +161,13 @@ export default function NewCollection() {
           placeholderTextColor="#888"
           keyboardType="numeric"
           value={totalItems}
-          onChangeText={setTotalItems}
+          onChangeText={(value) => {
+            const normalized = value.replace(/[^0-9]/g, "");
+            setTotalItems(normalized);
+            setErrors((prev) => ({ ...prev, totalItems: undefined }));
+          }}
         />
+        {!!errors.totalItems && <Text style={styles.errorText}>{errors.totalItems}</Text>}
 
         {/* Rarity Label */}
         <Text style={styles.rarityTitle}>Rarity Label*</Text>
@@ -135,7 +199,7 @@ export default function NewCollection() {
         </View>
 
         {/* Continue button */}
-        <TouchableOpacity style={styles.continueButton} onPress={() => router.push('/(company)/new-collection-continue')}>
+        <TouchableOpacity style={styles.continueButton} onPress={handleContinue}>
           <Text style={styles.continueButtonText}>Continue</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -247,6 +311,12 @@ const styles = StyleSheet.create({
   textArea: {
     height: 120,
     paddingTop: 14,
+  },
+  errorText: {
+    marginTop: -8,
+    marginBottom: 10,
+    fontSize: 12,
+    color: '#B91C1C',
   },
 
   // Image picker

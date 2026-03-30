@@ -7,7 +7,6 @@ import com.digitalseal.model.entity.ProductCategory;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -35,8 +34,4 @@ public class UpdateProductRequest {
     @Digits(integer = 10, fraction = 8, message = "Invalid price format")
     @Schema(description = "Price per unit (DRAFT or PUBLISHED)", example = "0.5")
     private BigDecimal price;
-    
-    @Min(value = 1, message = "Total quantity must be at least 1")
-    @Schema(description = "Total quantity (DRAFT or PUBLISHED)", example = "100")
-    private Integer totalQuantity;
 }

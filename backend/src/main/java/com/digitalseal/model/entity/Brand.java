@@ -41,6 +41,24 @@ public class Brand {
     
     @Column(name = "logo", length = 500)
     private String logo;
+
+    @Column(name = "company_banner", length = 500)
+    private String companyBanner;
+
+    @Column(name = "statement_letter_url", length = 500)
+    private String statementLetterUrl;
+
+    @Column(name = "person_in_charge_name")
+    private String personInChargeName;
+
+    @Column(name = "person_in_charge_role")
+    private String personInChargeRole;
+
+    @Column(name = "person_in_charge_email")
+    private String personInChargeEmail;
+
+    @Column(name = "person_in_charge_phone", length = 30)
+    private String personInChargePhone;
     
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;

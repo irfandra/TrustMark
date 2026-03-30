@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.digitalseal.dto.request.CreateProductRequest;
+import com.digitalseal.dto.request.PremintProductRequest;
 import com.digitalseal.dto.request.PublishProductRequest;
 import com.digitalseal.dto.request.UpdateProductRequest;
 import com.digitalseal.dto.response.ApiResponse;
@@ -78,7 +79,7 @@ public class ProductController {
     public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(
             Authentication authentication,
             @PathVariable Long brandId,
-            @PathVariable Long productId,
+            @PathVariable String productId,
             @Valid @RequestBody UpdateProductRequest request) {
         Long userId = Long.parseLong(authentication.getName());
         ProductResponse response = productService.updateProduct(userId, brandId, productId, request);
@@ -91,7 +92,7 @@ public class ProductController {
     public ResponseEntity<ApiResponse<Void>> deleteProduct(
             Authentication authentication,
             @PathVariable Long brandId,
-            @PathVariable Long productId) {
+            @PathVariable String productId) {
         Long userId = Long.parseLong(authentication.getName());
         productService.deleteProduct(userId, brandId, productId);
         return ResponseEntity.ok(ApiResponse.success(null, "Product deleted successfully"));
@@ -107,7 +108,7 @@ public class ProductController {
     public ResponseEntity<ApiResponse<ProductResponse>> publishProduct(
             Authentication authentication,
             @PathVariable Long brandId,
-            @PathVariable Long productId,
+            @PathVariable String productId,
             @Valid @RequestBody PublishProductRequest request) {
         Long userId = Long.parseLong(authentication.getName());
         ProductResponse response = productService.publishProduct(userId, brandId, productId, request);
@@ -120,9 +121,10 @@ public class ProductController {
     public ResponseEntity<ApiResponse<ProductResponse>> premintProduct(
             Authentication authentication,
             @PathVariable Long brandId,
-            @PathVariable Long productId) {
+            @PathVariable String productId,
+            @Valid @RequestBody PremintProductRequest request) {
         Long userId = Long.parseLong(authentication.getName());
-        ProductResponse response = productService.premintProduct(userId, brandId, productId);
+        ProductResponse response = productService.premintProduct(userId, brandId, productId, request);
         return ResponseEntity.ok(ApiResponse.success(response, "Digital seals pre-minted successfully"));
     }
     
@@ -132,7 +134,7 @@ public class ProductController {
     public ResponseEntity<ApiResponse<ProductResponse>> listProduct(
             Authentication authentication,
             @PathVariable Long brandId,
-            @PathVariable Long productId) {
+            @PathVariable String productId) {
         Long userId = Long.parseLong(authentication.getName());
         ProductResponse response = productService.listProduct(userId, brandId, productId);
         return ResponseEntity.ok(ApiResponse.success(response, "Product listed on marketplace"));
@@ -144,7 +146,7 @@ public class ProductController {
     public ResponseEntity<ApiResponse<ProductResponse>> delistProduct(
             Authentication authentication,
             @PathVariable Long brandId,
-            @PathVariable Long productId) {
+            @PathVariable String productId) {
         Long userId = Long.parseLong(authentication.getName());
         ProductResponse response = productService.delistProduct(userId, brandId, productId);
         return ResponseEntity.ok(ApiResponse.success(response, "Product delisted from marketplace"));
@@ -156,7 +158,7 @@ public class ProductController {
     public ResponseEntity<ApiResponse<ProductResponse>> archiveProduct(
             Authentication authentication,
             @PathVariable Long brandId,
-            @PathVariable Long productId) {
+            @PathVariable String productId) {
         Long userId = Long.parseLong(authentication.getName());
         ProductResponse response = productService.archiveProduct(userId, brandId, productId);
         return ResponseEntity.ok(ApiResponse.success(response, "Product archived"));
@@ -172,9 +174,15 @@ public class ProductController {
     public ResponseEntity<ApiResponse<List<ProductItemResponse>>> getProductItems(
             Authentication authentication,
             @PathVariable Long brandId,
-            @PathVariable Long productId) {
-        Long userId = Long.parseLong(authentication.getName());
-        productService.verifyBrandOwnership(userId, brandId);
+            @PathVariable String productId) {
+        if (authentication != null) {
+            try {
+                Long userId = Long.parseLong(authentication.getName());
+                productService.verifyBrandOwnership(userId, brandId);
+            } catch (NumberFormatException ignored) {
+                // Allow anonymous access in current dev/public mode.
+            }
+        }
         List<ProductItemResponse> items = productItemService.getItemsByProduct(productId);
         return ResponseEntity.ok(ApiResponse.success(items, "Product items retrieved"));
     }
@@ -185,7 +193,7 @@ public class ProductController {
     
     @Operation(summary = "Get product by ID", description = "Publicly accessible.")
     @GetMapping("/products/{productId}")
-    public ResponseEntity<ApiResponse<ProductResponse>> getProduct(@PathVariable Long productId) {
+    public ResponseEntity<ApiResponse<ProductResponse>> getProduct(@PathVariable String productId) {
         ProductResponse response = productService.getProductById(productId);
         return ResponseEntity.ok(ApiResponse.success(response, "Product retrieved successfully"));
     }
@@ -195,6 +203,14 @@ public class ProductController {
     public ResponseEntity<ApiResponse<List<ProductResponse>>> getProductsByCollection(@PathVariable Long collectionId) {
         List<ProductResponse> products = productService.getProductsByCollection(collectionId);
         return ResponseEntity.ok(ApiResponse.success(products, "Products retrieved successfully"));
+    }
+
+    @Operation(summary = "Get product items by product ID", description = "Publicly accessible. Returns per-item serials sorted by item index.")
+    @GetMapping("/products/{productId}/items")
+    public ResponseEntity<ApiResponse<List<ProductItemResponse>>> getPublicProductItems(
+            @PathVariable String productId) {
+        List<ProductItemResponse> items = productItemService.getItemsByProduct(productId);
+        return ResponseEntity.ok(ApiResponse.success(items, "Product items retrieved successfully"));
     }
     
     @Operation(summary = "Get all product categories", description = "Publicly accessible.")

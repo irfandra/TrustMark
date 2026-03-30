@@ -8,7 +8,7 @@ import { Collapsible } from '../../components/ui/collapsible';
 import { IconSymbol } from '../../components/ui/icon-symbol';
 import { Fonts } from '../../constants/theme';
 import { useRole } from '../../components/context/RoleContext';
-import CompanyOrders from './../(company)/orders';
+import CompanyOrders from './(creator)/(tabs)/order';
 
 export default function YourRack() {
    const { role } = useRole();

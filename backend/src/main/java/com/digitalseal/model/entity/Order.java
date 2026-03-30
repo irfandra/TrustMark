@@ -61,10 +61,6 @@ public class Order {
     @Column(name = "total_price", nullable = false, precision = 18, scale = 8)
     private BigDecimal totalPrice;
     
-    @Column(name = "currency", nullable = false, length = 10)
-    @Builder.Default
-    private String currency = "MATIC";
-    
     @Column(name = "payment_tx_hash", length = 66)
     private String paymentTxHash;
     

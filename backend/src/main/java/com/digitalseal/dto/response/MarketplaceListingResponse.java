@@ -17,8 +17,8 @@ import lombok.NoArgsConstructor;
 @Schema(description = "Marketplace listing response — simplified product view for buyers")
 public class MarketplaceListingResponse {
     
-    @Schema(description = "Product ID", example = "1")
-    private Long id;
+    @Schema(description = "Product ID", example = "A1B2C3")
+    private String id;
     
     @Schema(description = "Product name", example = "Louis Vuitton Speedy 30")
     private String productName;
@@ -34,9 +34,6 @@ public class MarketplaceListingResponse {
     
     @Schema(description = "Price per unit", example = "0.5")
     private BigDecimal price;
-    
-    @Schema(description = "Currency", example = "MATIC")
-    private String currency;
     
     @Schema(description = "Available quantity for purchase", example = "85")
     private Integer availableQuantity;

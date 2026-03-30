@@ -25,11 +25,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     
     List<Product> findByCollectionId(Long collectionId);
     
-    Optional<Product> findByIdAndBrandId(Long id, Long brandId);
-    
-    Boolean existsBySku(String sku);
-    
-    Boolean existsBySerialNumber(String serialNumber);
+    Optional<Product> findByProductCodeAndBrandId(String productCode, Long brandId);
+
+    Optional<Product> findByProductCode(String productCode);
+
+    Boolean existsByProductCode(String productCode);
     
     long countByCollectionId(Long collectionId);
     

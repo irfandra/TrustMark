@@ -31,6 +31,24 @@ public class BrandResponse {
     
     @Schema(description = "Brand logo URL", example = "https://example.com/logo.png")
     private String logo;
+
+    @Schema(description = "Company banner URL", example = "https://example.com/banner.png")
+    private String companyBanner;
+
+    @Schema(description = "Signed statement letter URL (PDF)", example = "https://example.com/statement-letter.pdf")
+    private String statementLetterUrl;
+
+    @Schema(description = "Person in charge full name", example = "Gerry Julian")
+    private String personInChargeName;
+
+    @Schema(description = "Person in charge role in company", example = "Chief Operating Officer")
+    private String personInChargeRole;
+
+    @Schema(description = "Person in charge email", example = "gerry@louisvuitton.com")
+    private String personInChargeEmail;
+
+    @Schema(description = "Person in charge phone number", example = "+62 812 3456 7890")
+    private String personInChargePhone;
     
     @Schema(description = "Brand description", example = "French luxury fashion house founded in 1854")
     private String description;

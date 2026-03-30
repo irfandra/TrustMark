@@ -1,17 +1,16 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  RefreshControl,
   SafeAreaView, ScrollView, View, Text, Image, ImageBackground,
-  StyleSheet, TouchableOpacity, TextInput, Modal, Platform,
+  Alert, StyleSheet, TouchableOpacity, TextInput, Modal, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { collectionService } from '@/services/collectionService';
+import LoadingPulse from '@/components/shared/loading-pulse';
 
-// ── Catalog Data ───────────────────────────────────────────
-const CATALOG_ITEMS = [
-  { id: '1', name: 'Birkin Brownies', collection: 'Birkin Collections', brand: 'Hermès', available: 1000, total: 1500, priceAmount: '120,100', priceUsd: '~$11,000', image: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=600' },
-  { id: '2', name: 'Birkin Bluestorn', collection: 'Birkin Collections', brand: 'Hermès', available: 500, total: 1500, priceAmount: '120,100', priceUsd: '~$11,000', image: 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=600' },
-];
+const parseParam = (value) => (Array.isArray(value) ? value[0] : value);
 
 // ── POL Icon ───────────────────────────────────────────────
 const PolIcon = ({ size = 18 }) => (
@@ -19,6 +18,17 @@ const PolIcon = ({ size = 18 }) => (
     <Text style={[s.polIconText, { fontSize: size * 0.5 }]}>P</Text>
   </View>
 );
+
+const getRarityBadgeStyle = (rarity) => {
+  const normalized = String(rarity || '').trim().toLowerCase();
+  if (normalized === 'rare') {
+    return { backgroundColor: '#B8860B', color: '#fff' };
+  }
+  if (normalized === 'limited') {
+    return { backgroundColor: '#C0392B', color: '#fff' };
+  }
+  return { backgroundColor: '#333', color: '#fff' };
+};
 
 // ── Mint Modal (inlined) ───────────────────────────────────
 const MintListModal = ({ visible, onClose, onConfirm }) => {
@@ -74,19 +84,76 @@ export default function CollectionDetail() {
   const params = useLocalSearchParams();
   const [search, setSearch] = useState('');
   const [showMintModal, setShowMintModal] = useState(false);
+  const [catalogItems, setCatalogItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState('');
+
+  const collectionId = parseParam(params.collectionId);
+
+  const loadCatalogItems = useCallback(async (showInitialLoader = true) => {
+    if (!collectionId) {
+      setCatalogItems([]);
+      setLoadError('Missing collection id');
+      if (showInitialLoader) {
+        setIsLoading(false);
+      }
+      setIsRefreshing(false);
+      return;
+    }
+
+    try {
+      if (showInitialLoader) {
+        setIsLoading(true);
+      }
+      setLoadError('');
+      const data = await collectionService.getProductsByCollection(collectionId);
+      setCatalogItems(Array.isArray(data) ? data : []);
+    } catch (error) {
+      setCatalogItems([]);
+      setLoadError(error?.message || 'Failed to load collection products');
+    } finally {
+      if (showInitialLoader) {
+        setIsLoading(false);
+      }
+      setIsRefreshing(false);
+    }
+  }, [collectionId]);
+
+  useEffect(() => {
+    loadCatalogItems();
+  }, [loadCatalogItems]);
+
+  const onRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    loadCatalogItems(false);
+  }, [loadCatalogItems]);
 
   const heroImage = params.image
     ? decodeURIComponent(params.image)
     : 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=800';
-  const title        = params.title    || 'Birkin Collections';
-  const subtitle     = params.subtitle || 'Luxury Bags';
-  const status       = params.status   || 'Draft';
-  const tag          = params.tag      || 'Rare';
-  const tagColor     = params.tagColor     || '#111';
-  const tagTextColor = params.tagTextColor || '#fff';
-  const totalItems   = params.items?.replace(/[^0-9,]/g, '') || '1,500';
+  const title = parseParam(params.title) || 'Collection';
+  const subtitle = parseParam(params.subtitle) || 'Product Collection';
+  const status = parseParam(params.status) || 'Draft';
+  const tag = parseParam(params.tag) || 'Rare';
+  const rarityBadgeStyle = getRarityBadgeStyle(tag);
 
-  const filtered = CATALOG_ITEMS.filter(
+  const totalItems = useMemo(() => {
+    const total = catalogItems.reduce((sum, item) => sum + Number(item.total || 0), 0);
+    return total.toLocaleString();
+  }, [catalogItems]);
+
+  const soldItems = useMemo(() => {
+    const sold = catalogItems.reduce((sum, item) => {
+      const total = Number(item.total || 0);
+      const available = Number(item.available || 0);
+      return sum + Math.max(total - available, 0);
+    }, 0);
+
+    return sold.toLocaleString();
+  }, [catalogItems]);
+
+  const filtered = catalogItems.filter(
     (i) => i.name.toLowerCase().includes(search.toLowerCase()) ||
            i.collection.toLowerCase().includes(search.toLowerCase())
   );
@@ -100,10 +167,15 @@ export default function CollectionDetail() {
   return (
     <SafeAreaView style={s.safe}>
       <View style={s.container}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 20 }}
+          refreshControl={
+            <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#111" />
+          }
+        >
 
           {/* ── Hero ── */}
-          {/* FIX: extra paddingBottom makes room for the hovering stat cards */}
           <View style={s.heroWrap}>
             <Image source={{ uri: heroImage }} style={StyleSheet.absoluteFill} resizeMode="cover" />
             <View style={s.heroOverlay} />
@@ -112,8 +184,8 @@ export default function CollectionDetail() {
               <Text style={s.backText}>Back</Text>
             </TouchableOpacity>
             <View style={s.heroContent}>
-              <View style={[s.rareBadge, { backgroundColor: tagColor }]}>
-                <Text style={[s.rareBadgeText, { color: tagTextColor }]}>{tag}</Text>
+              <View style={[s.rareBadge, { backgroundColor: rarityBadgeStyle.backgroundColor }]}> 
+                <Text style={[s.rareBadgeText, { color: rarityBadgeStyle.color }]}>{tag}</Text>
               </View>
               <Text style={s.heroTitle}>{title}</Text>
               <View style={s.heroSubRow}>
@@ -124,7 +196,7 @@ export default function CollectionDetail() {
             </View>
           </View>
 
-          {/* ── Stats — FIX: negative marginTop hovers cards over hero ── */}
+          {/* ── Stats ── */}
           <View style={s.statsRow}>
             <View style={s.statCard}>
               <Text style={s.statLabel}>Total Items</Text>
@@ -132,7 +204,7 @@ export default function CollectionDetail() {
             </View>
             <View style={s.statCard}>
               <Text style={s.statLabel}>Sold</Text>
-              <Text style={s.statValue}>0</Text>
+              <Text style={s.statValue}>{soldItems}</Text>
             </View>
           </View>
 
@@ -140,18 +212,28 @@ export default function CollectionDetail() {
           <View style={s.section}>
             <Text style={s.sectionTitle}>About</Text>
             <Text style={s.bodyText}>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi interdum orci vel
-              vestibulum lobortis. Sed eros erat, finibus eleifend magna nec, posuere eleifend
-              ante. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per
-              inceptos himenaeos.
+              This collection is loaded from your offchain backend products and can be listed
+              without blockchain integration.
             </Text>
           </View>
+
+          {isLoading && (
+            <View style={s.loadingWrap}>
+              <LoadingPulse label="Loading products..." />
+            </View>
+          )}
+
+          {!isLoading && !!loadError && (
+            <View style={s.errorWrap}>
+              <Text style={s.errorText}>{loadError}</Text>
+            </View>
+          )}
 
           {/* ── Catalog Header ── */}
           <View style={s.catalogHeaderRow}>
             <View style={s.catalogTitleWrap}>
               <Text style={s.catalogTitle}>Catalog</Text>
-              <Text style={s.catalogCount}>  200/ 4,000</Text>
+              <Text style={s.catalogCount}>  {filtered.length} / {catalogItems.length}</Text>
             </View>
             <TouchableOpacity style={s.filterBtn}>
               <Ionicons name="menu" size={18} color="#222" />
@@ -221,7 +303,7 @@ export default function CollectionDetail() {
           </TouchableOpacity>
           <TouchableOpacity
             style={s.editBtn}
-            onPress={() => router.push({ pathname: '/edit-collection', params: { title, subtitle, status, tag } })}
+            onPress={() => router.push({ pathname: '/(tabs)/(creator)/edit-collection', params: { title, subtitle, status, tag } })}
           >
             <Ionicons name="create-outline" size={22} color="#222" />
           </TouchableOpacity>
@@ -232,8 +314,22 @@ export default function CollectionDetail() {
           visible={showMintModal}
           onClose={() => setShowMintModal(false)}
           onConfirm={(selectedDate) => {
+            if (!selectedDate) {
+              Alert.alert('Date Required', 'Please select a listing date first.');
+              return;
+            }
             setShowMintModal(false);
-            router.push({ pathname: '/collection-detail-listed', params: { listed: true } });
+            router.push({
+              pathname: '/collection-detail-listed',
+              params: {
+                listed: true,
+                collectionId,
+                title,
+                subtitle,
+                tag,
+                image: encodeURIComponent(heroImage),
+              },
+            });
           }}
         />
       </View>
@@ -246,7 +342,6 @@ const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#f0f0f0' },
   container: { flex: 1 },
 
-  // Hero — extra paddingBottom reserves space for floating stat cards
   heroWrap: { width: '100%', height: 260 },
   heroOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '75%', backgroundColor: 'rgba(0,0,0,0.55)' },
   backBtn: { position: 'absolute', top: 16, left: 16, zIndex: 10, flexDirection: 'row', alignItems: 'center', gap: 4 },
@@ -260,13 +355,12 @@ const s = StyleSheet.create({
   heroDivider: { color: '#aaa', fontSize: 13 },
   heroDraft: { color: '#ddd', fontSize: 13, fontStyle: 'italic' },
 
-  // Stats — KEY FIX: negative marginTop floats cards over hero bottom edge
   statsRow: {
     flexDirection: 'row',
     paddingHorizontal: 16,
     gap: 12,
-    marginTop: -28,       // ← pulls cards up over the hero
-    zIndex: 10,           // ← keeps cards above the hero overlay
+    marginTop: -28,
+    zIndex: 10,
   },
   statCard: {
     flex: 1, backgroundColor: '#fff', borderRadius: 14,
@@ -278,12 +372,32 @@ const s = StyleSheet.create({
   statLabel: { fontSize: 14, color: '#333', fontWeight: '600' },
   statValue: { fontSize: 18, fontWeight: '800', color: '#111' },
 
-  // Sections
   section: { paddingHorizontal: 16, marginTop: 20 },
   sectionTitle: { fontSize: 18, fontWeight: '800', color: '#111', marginBottom: 8 },
   bodyText: { fontSize: 15, color: '#333', lineHeight: 23 },
 
-  // Catalog header
+  loadingWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 18,
+    gap: 8,
+  },
+  loadingText: {
+    fontSize: 13,
+    color: '#555',
+  },
+  errorWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    paddingHorizontal: 16,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#b91c1c',
+    textAlign: 'center',
+  },
+
   catalogHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, marginTop: 24, marginBottom: 12 },
   catalogTitleWrap: { flexDirection: 'row', alignItems: 'baseline' },
   catalogTitle: { fontSize: 28, fontWeight: '900', color: '#111' },
@@ -291,11 +405,9 @@ const s = StyleSheet.create({
   filterBtn: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: '#ccc', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10, gap: 8, backgroundColor: '#fff' },
   filterText: { fontSize: 15, color: '#222', fontWeight: '500' },
 
-  // Search
   searchWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 14, marginHorizontal: 16, paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1, borderColor: '#e0e0e0', marginBottom: 16 },
   searchInput: { flex: 1, fontSize: 15, color: '#333' },
 
-  // Grid
   grid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, gap: 12 },
   catalogCard: { width: '47%', borderRadius: 18, overflow: 'hidden', height: 200 },
   cardBg: { flex: 1, justifyContent: 'flex-end' },
@@ -314,18 +426,15 @@ const s = StyleSheet.create({
   cardPriceAmount: { color: '#fff', fontSize: 11, fontWeight: '600' },
   cardPriceUsd: { color: '#bbb', fontSize: 10, textDecorationLine: 'line-through' },
 
-  // POL
   polIcon: { backgroundColor: '#7b5ea7', justifyContent: 'center', alignItems: 'center' },
   polIconText: { color: '#fff', fontWeight: '700' },
 
-  // Footer
   footer: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, backgroundColor: '#f0f0f0', borderTopWidth: 1, borderTopColor: '#e0e0e0', gap: 10 },
   mintBtn: { flex: 1, backgroundColor: '#111', borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   mintBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   deleteBtn: { backgroundColor: '#cc0000', borderRadius: 14, width: 52, height: 52, justifyContent: 'center', alignItems: 'center' },
   editBtn: { backgroundColor: '#fff', borderRadius: 14, width: 52, height: 52, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: '#ddd' },
 
-  // Modal
   backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' },
   modalCenter: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   modalCard: { backgroundColor: '#fff', borderRadius: 22, padding: 24, width: '88%', maxWidth: 420, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 24, elevation: 10 },

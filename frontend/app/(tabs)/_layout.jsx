@@ -1,4 +1,4 @@
-import { Tabs } from "expo-router";
+import { Tabs, useSegments } from "expo-router";
 
 import { HapticTab } from "../../components/shared/haptic-tab";
 import { IconSymbol } from "../../components/ui/icon-symbol";
@@ -7,13 +7,22 @@ import { useColorScheme } from "../../hooks/use-color-scheme";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const segments = useSegments();
+
+  const rootTabs = ["index", "yourrack", "authcheck", "profile"];
+  const isRootTabsScreen =
+    segments[0] === "(tabs)" &&
+    segments.length === 2 &&
+    rootTabs.includes(segments[1]);
 
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
+        tabBarInactiveTintColor: Colors[colorScheme ?? "light"].tabIconDefault,
         headerShown: false,
         tabBarButton: HapticTab,
+        tabBarStyle: isRootTabsScreen ? undefined : { display: "none" },
       }}
     >
       <Tabs.Screen
@@ -52,6 +61,10 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen name="(creator)" options={{ href: null }} />
+      <Tabs.Screen name="(collector)" options={{ href: null }} />
+      <Tabs.Screen name="item" options={{ href: null }} />
+      <Tabs.Screen name="store" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -6,6 +6,7 @@ import com.digitalseal.dto.response.CollectionResponse;
 import com.digitalseal.exception.UserAlreadyExistsException;
 import com.digitalseal.model.entity.Brand;
 import com.digitalseal.model.entity.Collection;
+import com.digitalseal.model.entity.CollectionStatus;
 import com.digitalseal.repository.BrandRepository;
 import com.digitalseal.repository.CollectionRepository;
 import com.digitalseal.repository.ProductRepository;
@@ -48,6 +49,11 @@ public class CollectionService {
                 .season(request.getSeason())
                 .isLimitedEdition(request.getIsLimitedEdition() != null ? request.getIsLimitedEdition() : false)
                 .releaseDate(request.getReleaseDate())
+            .status(request.getStatus() != null ? request.getStatus() : CollectionStatus.DRAFT)
+            .tag(request.getTag())
+            .salesEndAt(request.getSalesEndAt())
+            .tagColor(request.getTagColor())
+            .tagTextColor(request.getTagTextColor())
                 .build();
         
         Collection saved = collectionRepository.save(collection);
@@ -113,6 +119,21 @@ public class CollectionService {
         if (request.getReleaseDate() != null) {
             collection.setReleaseDate(request.getReleaseDate());
         }
+        if (request.getStatus() != null) {
+            collection.setStatus(request.getStatus());
+        }
+        if (request.getTag() != null) {
+            collection.setTag(request.getTag());
+        }
+        if (request.getSalesEndAt() != null) {
+            collection.setSalesEndAt(request.getSalesEndAt());
+        }
+        if (request.getTagColor() != null) {
+            collection.setTagColor(request.getTagColor());
+        }
+        if (request.getTagTextColor() != null) {
+            collection.setTagTextColor(request.getTagTextColor());
+        }
         
         Collection updated = collectionRepository.save(collection);
         log.info("Collection '{}' updated by user ID: {}", updated.getCollectionName(), userId);
@@ -158,13 +179,20 @@ public class CollectionService {
                 .id(collection.getId())
                 .brandId(collection.getBrand().getId())
                 .brandName(collection.getBrand().getBrandName())
+            .brandLogo(collection.getBrand().getLogo())
                 .collectionName(collection.getCollectionName())
                 .description(collection.getDescription())
                 .imageUrl(collection.getImageUrl())
                 .season(collection.getSeason())
                 .isLimitedEdition(collection.getIsLimitedEdition())
                 .releaseDate(collection.getReleaseDate())
+            .status(collection.getStatus())
+            .tag(collection.getTag())
+            .salesEndAt(collection.getSalesEndAt())
+            .tagColor(collection.getTagColor())
+            .tagTextColor(collection.getTagTextColor())
                 .productCount(productCount)
+            .itemsCount(productCount)
                 .createdAt(collection.getCreatedAt())
                 .updatedAt(collection.getUpdatedAt())
                 .build();

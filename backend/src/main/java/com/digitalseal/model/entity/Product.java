@@ -25,6 +25,9 @@ public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "product_code", nullable = false, unique = true, length = 6)
+    private String productCode;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "brand_id", nullable = false)
@@ -44,31 +47,12 @@ public class Product {
     @Column(name = "category", nullable = false)
     private ProductCategory category;
     
-    @Column(name = "sku", nullable = false, unique = true, length = 100)
-    private String sku;
-    
-    @Column(name = "serial_number", unique = true, length = 100)
-    private String serialNumber;
-    
     @Column(name = "image_url", length = 500)
     private String imageUrl;
     
     // Pricing
     @Column(name = "price", precision = 18, scale = 8)
     private BigDecimal price;
-    
-    @Column(name = "currency", length = 10, nullable = false)
-    @Builder.Default
-    private String currency = "MATIC";
-    
-    // Quantity tracking
-    @Column(name = "total_quantity", nullable = false)
-    @Builder.Default
-    private Integer totalQuantity = 1;
-    
-    @Column(name = "available_quantity", nullable = false)
-    @Builder.Default
-    private Integer availableQuantity = 0;
     
     // Blockchain fields
     @Column(name = "contract_address", length = 42)

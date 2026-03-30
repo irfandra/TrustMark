@@ -13,7 +13,11 @@ import org.springframework.stereotype.Repository;
 public interface ProductItemRepository extends JpaRepository<ProductItem, Long> {
     
     List<ProductItem> findByProductId(Long productId);
-    
+
+    List<ProductItem> findByProductProductCode(String productCode);
+
+    List<ProductItem> findByProductProductCodeOrderByItemIndexAsc(String productCode);
+
     List<ProductItem> findByProductIdAndSealStatus(Long productId, SealStatus sealStatus);
     
     Optional<ProductItem> findByItemSerial(String itemSerial);

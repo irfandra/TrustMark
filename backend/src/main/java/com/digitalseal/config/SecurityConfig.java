@@ -29,14 +29,20 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configure(http))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            // Dev mode override: make all endpoints callable without JWT.
+            .anonymous(anonymous -> anonymous
+                .principal("1")
+                .authorities("ROLE_OWNER", "ROLE_BRAND")
+            )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/auth/**").permitAll()
                 // Brand public endpoints
                 .requestMatchers(HttpMethod.GET, "/brands/*").permitAll()
                 .requestMatchers(HttpMethod.GET, "/brands/*/collections", "/brands/*/collections/*").permitAll()
                 .requestMatchers(HttpMethod.GET, "/brands/*/products").permitAll()
+                .requestMatchers(HttpMethod.GET, "/brands/*/products/*/items").permitAll()
                 // Product public endpoints
-                .requestMatchers(HttpMethod.GET, "/products/*", "/products/categories").permitAll()
+                .requestMatchers(HttpMethod.GET, "/products/**", "/products/categories").permitAll()
                 .requestMatchers(HttpMethod.GET, "/collections/*/products").permitAll()
                 // Marketplace (all public)
                 .requestMatchers(HttpMethod.GET, "/marketplace", "/marketplace/**").permitAll()
@@ -49,7 +55,7 @@ public class SecurityConfig {
                 // Infrastructure
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
-                .anyRequest().authenticated()
+                .anyRequest().permitAll()
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         

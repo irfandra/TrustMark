@@ -3,6 +3,8 @@ package com.digitalseal.service;
 import com.digitalseal.dto.response.MarketplaceListingResponse;
 import com.digitalseal.model.entity.Product;
 import com.digitalseal.model.entity.ProductCategory;
+import com.digitalseal.model.entity.SealStatus;
+import com.digitalseal.repository.ProductItemRepository;
 import com.digitalseal.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Service;
 public class MarketplaceService {
     
     private final ProductRepository productRepository;
+    private final ProductItemRepository productItemRepository;
     
     /**
      * Browse all listed products (paginated)
@@ -50,16 +53,18 @@ public class MarketplaceService {
     }
     
     private MarketplaceListingResponse mapToListingResponse(Product product) {
+        long totalQuantity = productItemRepository.countByProductId(product.getId());
+        long availableQuantity = productItemRepository.countByProductIdAndSealStatus(product.getId(), SealStatus.PRE_MINTED);
+
         return MarketplaceListingResponse.builder()
-                .id(product.getId())
+            .id(product.getProductCode())
                 .productName(product.getProductName())
                 .description(product.getDescription())
                 .imageUrl(product.getImageUrl())
                 .category(product.getCategory())
                 .price(product.getPrice())
-                .currency(product.getCurrency())
-                .availableQuantity(product.getAvailableQuantity())
-                .totalQuantity(product.getTotalQuantity())
+            .availableQuantity((int) availableQuantity)
+            .totalQuantity((int) totalQuantity)
                 .brandId(product.getBrand().getId())
                 .brandName(product.getBrand().getBrandName())
                 .brandLogo(product.getBrand().getLogo())

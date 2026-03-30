@@ -11,6 +11,12 @@ CREATE TABLE brands (
     company_address TEXT NULL,
     company_wallet_address VARCHAR(42) NULL,
     logo VARCHAR(500) NULL,
+    company_banner VARCHAR(500) NULL,
+    statement_letter_url VARCHAR(500) NULL,
+    person_in_charge_name VARCHAR(255) NULL,
+    person_in_charge_role VARCHAR(255) NULL,
+    person_in_charge_email VARCHAR(255) NULL,
+    person_in_charge_phone VARCHAR(30) NULL,
     description TEXT NULL,
     
     -- Status

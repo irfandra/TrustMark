@@ -22,8 +22,8 @@ public class OrderResponse {
     @Schema(description = "Unique order number", example = "ORD-20260303-ABC123")
     private String orderNumber;
     
-    @Schema(description = "Product ID", example = "1")
-    private Long productId;
+    @Schema(description = "Product ID", example = "A1B2C3")
+    private String productId;
     
     @Schema(description = "Product name", example = "Louis Vuitton Speedy 30")
     private String productName;
@@ -36,6 +36,18 @@ public class OrderResponse {
     
     @Schema(description = "Buyer user ID", example = "5")
     private Long buyerId;
+
+    @Schema(description = "Buyer username", example = "johndoe")
+    private String buyerUsername;
+
+    @Schema(description = "Buyer display name", example = "John Doe")
+    private String buyerName;
+
+    @Schema(description = "Buyer phone number", example = "+1234567890")
+    private String buyerPhoneNumber;
+
+    @Schema(description = "Brand owner username", example = "hermesofficial")
+    private String brandOwnerUsername;
     
     @Schema(description = "Buyer wallet address")
     private String buyerWallet;
@@ -48,9 +60,6 @@ public class OrderResponse {
     
     @Schema(description = "Total price", example = "0.5")
     private BigDecimal totalPrice;
-    
-    @Schema(description = "Currency", example = "MATIC")
-    private String currency;
     
     @Schema(description = "Payment transaction hash")
     private String paymentTxHash;
@@ -81,4 +90,10 @@ public class OrderResponse {
     
     @Schema(description = "When order was completed")
     private LocalDateTime completedAt;
+
+    @Schema(description = "When order was cancelled")
+    private LocalDateTime cancelledAt;
+
+    @Schema(description = "Cancellation reason")
+    private String cancellationReason;
 }

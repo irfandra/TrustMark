@@ -1,30 +1,21 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "expo-router";
-import TabRoleToggle from "../../components/ui/tab-role-toggle";
 import {
   Dimensions, FlatList, StyleSheet, Text,
-  TouchableOpacity, View,
+  TouchableOpacity, View, ScrollView, RefreshControl,
 } from "react-native";
+import { orderService } from "@/services/orderService";
+import LoadingPulse from "@/components/shared/loading-pulse";
 
 const { width: screenWidth } = Dimensions.get("window");
 const isTablet = screenWidth >= 768;
-
-const orders = [
-  { id: "EA4GH",  status: "Request",     itemName: "Birkin Pinky",    collection: "Birkin Collections", pol: 500000, actionLabel: "Process" },
-  { id: "BB1XZ",  status: "Request",     itemName: "Birkin Rose",     collection: "Birkin Collections", pol: 500000, actionLabel: "Process" },
-  { id: "AS56JH", status: "On Prepare",  itemName: "Birkin Brownies", collection: "Birkin Collections", pol: 500000, actionLabel: "Send" },
-  { id: "CC2YW",  status: "On Prepare",  itemName: "Birkin Gold",     collection: "Birkin Collections", pol: 500000, actionLabel: "Send" },
-  { id: "JKL98F", status: "On Shipment", itemName: "Birkin Brownies", collection: "Birkin Collections", pol: 500000, actionLabel: "Wait For Claim" },
-  { id: "DD3PQ",  status: "On Shipment", itemName: "Birkin Black",    collection: "Birkin Collections", pol: 500000, actionLabel: "Wait For Claim" },
-];
 
 // ── Helpers ────────────────────────────────────────────────
 function getButtonStyle(actionLabel) {
   switch (actionLabel) {
     case "Process":        return { bg: "#111", text: "#fff" };
-    case "Send":           return { bg: "#111", text: "#fff" };
-    case "Wait For Claim": return { bg: "#e0e0e0", text: "#888" };
+    case "Ship":           return { bg: "#111", text: "#fff" };
     default:               return { bg: "#111", text: "#fff" };
   }
 }
@@ -32,30 +23,33 @@ function getButtonStyle(actionLabel) {
 function getStage(actionLabel) {
   switch (actionLabel) {
     case "Process":        return "process";
-    case "Send":           return "shipment";
-    case "Wait For Claim": return "claim";
+    case "Ship":           return "shipment";
     default:               return "process";
   }
 }
 
 // ── OrderItem ──────────────────────────────────────────────
-function OrderItem({ id, itemName, collection, pol, actionLabel }) {
+function OrderItem({ order }) {
   const router = useRouter();
-  const { bg, text } = getButtonStyle(actionLabel);
+  const hasAction = Boolean(String(order.actionLabel || '').trim());
+  const isShipmentWait = order.status === "On Shipment";
+  const isCompletedView = order.status === "Completed";
+  const { bg, text } = getButtonStyle(order.actionLabel);
 
   const itemParams = {
-    id,
-    itemName,
-    collection,
-    pol: pol.toLocaleString(),
-    actionLabel,
-    stage: getStage(actionLabel),
+    orderId: String(order.orderId),
+    itemId: order.displayId,
+    itemName: order.itemName,
+    collection: order.collection,
+    pol: Number(order.pol || 0).toLocaleString(),
+    actionLabel: order.actionLabel,
+    stage: getStage(order.actionLabel),
   };
 
   // Whole card → same dynamic page
   const handleCardPress = () => {
     router.push({
-      pathname: "/(company)/item-orders-dynamic",
+      pathname: "/(tabs)/(creator)/item-orders-dynamic",
       params: itemParams,
     });
   };
@@ -63,7 +57,7 @@ function OrderItem({ id, itemName, collection, pol, actionLabel }) {
   // Action button → same dynamic page with stage param
   const handleActionPress = () => {
     router.push({
-      pathname: "/(company)/item-orders-dynamic",
+      pathname: "/(tabs)/(creator)/item-orders-dynamic",
       params: itemParams,
     });
   };
@@ -76,9 +70,9 @@ function OrderItem({ id, itemName, collection, pol, actionLabel }) {
     >
       {/* Left: order info */}
       <View style={styles.orderInfo}>
-        <Text style={styles.orderId}>#{id}</Text>
-        <Text style={styles.orderItemName}>{itemName}</Text>
-        <Text style={styles.orderCollection}>{collection}</Text>
+        <Text style={styles.orderId}>{order.displayId}</Text>
+        <Text style={styles.orderItemName}>{order.itemName}</Text>
+        <Text style={styles.orderCollection}>{order.collection}</Text>
       </View>
 
       {/* Middle: POL value */}
@@ -87,37 +81,87 @@ function OrderItem({ id, itemName, collection, pol, actionLabel }) {
           <Ionicons name="link" size={14} color="#fff" />
         </View>
         <Text style={styles.orderPolLabel}>POL</Text>
-        <Text style={styles.orderPolValue}>{pol.toLocaleString()}</Text>
+        <Text style={styles.orderPolValue}>{Number(order.pol || 0).toLocaleString()}</Text>
       </View>
 
-      {/* Right: action button — stops card nav, goes to same route */}
-      <TouchableOpacity
-        style={[styles.orderActionButton, { backgroundColor: bg }]}
-        onPress={handleActionPress}
-        activeOpacity={0.8}
-      >
-        <Text
-          style={[styles.orderActionButtonText, { color: text }]}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={0.7}
+      {/* Right: request/prepare use CTA button, shipment uses passive label, completed uses eye button */}
+      {hasAction && isShipmentWait && (
+        <View style={styles.orderActionTextWrap}>
+          <Text style={styles.orderActionPassiveText}>{order.actionLabel}</Text>
+        </View>
+      )}
+
+      {hasAction && isCompletedView && (
+        <TouchableOpacity
+          style={styles.orderActionIconButton}
+          onPress={handleActionPress}
+          activeOpacity={0.8}
         >
-          {actionLabel}
-        </Text>
-      </TouchableOpacity>
+          <Ionicons name="eye-outline" size={18} color="#fff" />
+        </TouchableOpacity>
+      )}
+
+      {hasAction && !isShipmentWait && !isCompletedView && (
+        <TouchableOpacity
+          style={[styles.orderActionButton, { backgroundColor: bg }]}
+          onPress={handleActionPress}
+          activeOpacity={0.8}
+        >
+          <Text
+            style={[styles.orderActionButtonText, { color: text }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+          >
+            {order.actionLabel}
+          </Text>
+        </TouchableOpacity>
+      )}
     </TouchableOpacity>
   );
 }
 
 // ── Main Screen ────────────────────────────────────────────
-export default function CompanyOrders() {
+export default function OrderScreen() {
   const [activeTab, setActiveTab]       = useState("All");
   const [openRequest, setOpenRequest]   = useState(true);
   const [openPrepare, setOpenPrepare]   = useState(true);
   const [openShipment, setOpenShipment] = useState(true);
-  const [role, setRole]                 = useState("company");
+  const [openCompleted, setOpenCompleted] = useState(true);
+  const [orders, setOrders]             = useState([]);
+  const [isLoading, setIsLoading]       = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [loadError, setLoadError]       = useState("");
 
-  const tabs = ["All", "Request", "On Prepare", "On Shipment"];
+  const tabs = ["All", "Request", "On Prepare", "On Shipment", "Completed"];
+
+  const loadOrders = useCallback(async (showInitialLoader = true) => {
+    try {
+      if (showInitialLoader) {
+        setIsLoading(true);
+      }
+      setLoadError("");
+      const data = await orderService.getCreatorOrders();
+      setOrders(Array.isArray(data) ? data : []);
+    } catch (error) {
+      setOrders([]);
+      setLoadError(error?.message || "Failed to load orders");
+    } finally {
+      if (showInitialLoader) {
+        setIsLoading(false);
+      }
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadOrders();
+  }, [loadOrders]);
+
+  const onRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    loadOrders(false);
+  }, [loadOrders]);
 
   function renderSection(title, open, setOpen, data) {
     return (
@@ -142,14 +186,7 @@ export default function CompanyOrders() {
               <Text style={styles.emptyText}>No orders in this section.</Text>
             ) : (
               data.map((item) => (
-                <OrderItem
-                  key={item.id}
-                  id={item.id}
-                  itemName={item.itemName}
-                  collection={item.collection}
-                  pol={item.pol}
-                  actionLabel={item.actionLabel}
-                />
+                <OrderItem key={item.orderId} order={item} />
               ))
             )}
           </View>
@@ -160,12 +197,13 @@ export default function CompanyOrders() {
 
   const ListHeader = () => (
     <>
-      <View style={styles.header}>
-        <Text style={styles.logo}>ZEAL</Text>
-        <TabRoleToggle role={role} setRole={setRole} />
-      </View>
       <Text style={styles.title}>Orders</Text>
-      <View style={styles.tabs}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabsScroll}
+        contentContainerStyle={styles.tabs}
+      >
         {tabs.map((tab) => (
           <TouchableOpacity
             key={tab}
@@ -175,12 +213,26 @@ export default function CompanyOrders() {
             <Text style={[styles.tabText, activeTab === tab && styles.activeText]}>{tab}</Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
+
+      {isLoading && (
+        <View style={styles.loadingWrap}>
+          <LoadingPulse label="Loading orders..." />
+        </View>
+      )}
+
+      {!isLoading && !!loadError && (
+        <View style={styles.errorWrap}>
+          <Text style={styles.errorText}>{loadError}</Text>
+        </View>
+      )}
     </>
   );
 
   const ListFooter = () => (
     <>
+      {!isLoading && !loadError && (
+        <>
       {(activeTab === "All" || activeTab === "Request") &&
         renderSection("Request", openRequest, setOpenRequest,
           orders.filter((o) => o.status === "Request"))}
@@ -190,6 +242,11 @@ export default function CompanyOrders() {
       {(activeTab === "All" || activeTab === "On Shipment") &&
         renderSection("On Shipment", openShipment, setOpenShipment,
           orders.filter((o) => o.status === "On Shipment"))}
+      {(activeTab === "All" || activeTab === "Completed") &&
+        renderSection("Completed", openCompleted, setOpenCompleted,
+          orders.filter((o) => o.status === "Completed"))}
+        </>
+      )}
     </>
   );
 
@@ -197,26 +254,50 @@ export default function CompanyOrders() {
     <FlatList
       data={[]}
       keyExtractor={() => ""}
+      style={styles.screen}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={styles.scrollContent}
       ListHeaderComponent={ListHeader}
       ListFooterComponent={ListFooter}
+      refreshControl={
+        <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#111" />
+      }
     />
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContent: { paddingHorizontal: isTablet ? 32 : 16, paddingTop: 60, paddingBottom: 100 },
+  screen: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  scrollContent: {
+    paddingHorizontal: isTablet ? 32 : 16,
+    paddingTop: isTablet ? 12 : 8,
+    paddingBottom: 100,
+    backgroundColor: "#fff",
+  },
 
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  logo: { fontSize: isTablet ? 40 : 32, fontWeight: "800", letterSpacing: 1 },
-  title: { fontSize: isTablet ? 36 : 28, fontWeight: "600", marginTop: 16, marginBottom: 4 },
+  title: { fontSize: isTablet ? 36 : 28, fontWeight: "600", marginTop: 0, marginBottom: 4 },
+  loadingWrap: { alignItems: "center", justifyContent: "center", marginTop: 30, gap: 8 },
+  loadingText: { fontSize: 13, color: "#555" },
+  errorWrap: { marginTop: 20, alignItems: "center", paddingHorizontal: 20 },
+  errorText: { color: "#b91c1c", fontSize: 12, textAlign: "center" },
 
   columnLabels: { flexDirection: "row", alignItems: "center", paddingHorizontal: 4, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: "#e0e0e0", marginBottom: 6 },
   columnLabel: { fontSize: 13, fontWeight: "700", fontStyle: "italic", color: "#222" },
 
-  tabs: { flexDirection: "row", marginTop: 12, marginBottom: 16, gap: 6 },
-  tabButton: { flex: 1, paddingVertical: 10, borderWidth: 1, borderColor: "#bbb", borderRadius: 20, alignItems: "center" },
+  tabsScroll: { marginTop: 12, marginBottom: 16 },
+  tabs: { flexDirection: "row", gap: 6, paddingRight: 6 },
+  tabButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    minWidth: isTablet ? 130 : 102,
+    borderWidth: 1,
+    borderColor: "#bbb",
+    borderRadius: 20,
+    alignItems: "center",
+  },
   activeTab: { backgroundColor: "#000", borderColor: "#000" },
   tabText: { fontSize: isTablet ? 13 : 11, color: "#333" },
   activeText: { color: "#fff", fontWeight: "600" },
@@ -238,6 +319,28 @@ const styles = StyleSheet.create({
   orderPolLabel: { fontSize: 13, fontWeight: "700", color: "#222", marginRight: 4 },
   orderPolValue: { fontSize: 13, color: "#222" },
 
+  orderActionTextWrap: {
+    width: 100,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+    paddingHorizontal: 6,
+  },
+  orderActionPassiveText: {
+    fontSize: 12,
+    color: "#444",
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  orderActionIconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: "#111",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+  },
   orderActionButton: { width: 100, paddingVertical: 8, paddingHorizontal: 8, borderRadius: 12, alignItems: "center", justifyContent: "center", marginRight: 8 },
   orderActionButtonText: { fontSize: 13, fontWeight: "700" },
 });

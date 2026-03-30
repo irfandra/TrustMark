@@ -55,6 +55,16 @@ public class ProductItem {
     
     @Column(name = "claim_code_hash", length = 64)
     private String claimCodeHash;
+
+    // Three distinct QR payloads per product item
+    @Column(name = "nft_qr_code", length = 255)
+    private String nftQrCode;
+
+    @Column(name = "product_label_qr_code", length = 255)
+    private String productLabelQrCode;
+
+    @Column(name = "certificate_qr_code", length = 255)
+    private String certificateQrCode;
     
     @Enumerated(EnumType.STRING)
     @Column(name = "seal_status", nullable = false, length = 20)

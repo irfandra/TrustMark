@@ -1,10 +1,15 @@
-import React from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  RefreshControl,
   SafeAreaView, ScrollView, View, Text,
   ImageBackground, StyleSheet, TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { collectionService } from '@/services/collectionService';
+import LoadingPulse from '@/components/shared/loading-pulse';
+
+const parseParam = (value) => (Array.isArray(value) ? value[0] : value);
 
 const POL_ICON = () => (
   <View style={styles.polIcon}>
@@ -14,37 +19,99 @@ const POL_ICON = () => (
 
 export default function ItemDetail() {
   const router = useRouter();
-  const { itemId } = useLocalSearchParams();
+  const params = useLocalSearchParams();
+  const itemId = parseParam(params.itemId);
+  const [itemData, setItemData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
-  const item = {
-    id: itemId,
-    title: 'Birkin Brownies',
-    collection: 'Birkin Collections',
-    brand: 'Hermès',
-    brandLogo: null, // replace with real logo uri if available
-    image: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=800',
-    description:
-      'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi interdum orci vel vestibulum lobortis. Sed eros erat, finibus eleifend magna nec, posuere eleifend ante. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.',
-    specifications: [
-      { label: 'Color', value: 'Brown' },
-      { label: 'Straps', value: 'Gold' },
-    ],
-    priceToken: 'POL',
-    priceAmount: '120,100',
-    priceUsd: '~$11,000',
-    purchaseItems: [
-      { id: '#EA4GH', edition: '124 of 1500', price: '120,100' },
-      { id: '#TH43S', edition: '125 of 1500', price: '120,100' },
-    ],
-    activity: [
-      { event: 'Transfer', item: '#EA4GH', price: '120,100', from: '@glimpse27', to: '0sfwer2...13s' },
-      { event: 'Mint',     item: '#TH43S', price: '120,100', from: '0sfwer2...13s', to: '@glimpse27' },
-    ],
-  };
+  const loadItem = useCallback(async (showInitialLoader = true) => {
+    if (!itemId) {
+      setLoadError('Missing item id');
+      if (showInitialLoader) {
+        setIsLoading(false);
+      }
+      setIsRefreshing(false);
+      return;
+    }
+
+    try {
+      if (showInitialLoader) {
+        setIsLoading(true);
+      }
+      setLoadError('');
+      const data = await collectionService.getProductById(itemId);
+      setItemData(data);
+    } catch (error) {
+      setItemData(null);
+      setLoadError(error?.message || 'Failed to load item details');
+    } finally {
+      if (showInitialLoader) {
+        setIsLoading(false);
+      }
+      setIsRefreshing(false);
+    }
+  }, [itemId]);
+
+  useEffect(() => {
+    loadItem();
+  }, [loadItem]);
+
+  const onRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    loadItem(false);
+  }, [loadItem]);
+
+  const item = useMemo(() => {
+    if (itemData) {
+      return {
+        id: itemData.id,
+        title: itemData.name,
+        collection: itemData.collection,
+        brand: itemData.brand,
+        brandLogo: null,
+        image: itemData.image,
+        description:
+          itemData.description ||
+          'No additional description available for this offchain product.',
+        specifications: itemData.specifications,
+        priceToken: 'POL',
+        priceAmount: itemData.priceAmount,
+        priceUsd: itemData.priceUsd,
+        purchaseItems: itemData.purchaseItems,
+        activity: itemData.activity,
+      };
+    }
+
+    return {
+      id: itemId,
+      title: parseParam(params.name) || 'Product',
+      collection: parseParam(params.collection) || 'Collection',
+      brand: parseParam(params.brand) || 'Brand',
+      brandLogo: null,
+      image: parseParam(params.image)
+        ? decodeURIComponent(parseParam(params.image))
+        : 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=800',
+      description: 'No additional description available for this offchain product.',
+      specifications: [],
+      priceToken: 'POL',
+      priceAmount: parseParam(params.priceAmount) || '--',
+      priceUsd: parseParam(params.priceUsd) || '',
+      purchaseItems: [],
+      activity: [],
+    };
+  }, [itemData, itemId, params]);
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#111" />
+        }
+      >
 
         {/* ── Hero Header ── */}
         <ImageBackground source={{ uri: item.image }} style={styles.headerBg}>
@@ -66,6 +133,19 @@ export default function ItemDetail() {
           </View>
         </ImageBackground>
 
+        {isLoading && (
+          <View style={styles.loadingWrap}>
+            <LoadingPulse label="Loading item details..." />
+          </View>
+        )}
+
+        {!isLoading && !!loadError && (
+          <View style={styles.errorWrap}>
+            <Text style={styles.errorText}>{loadError}</Text>
+            <Text style={styles.errorSubText}>Showing fallback details from route params.</Text>
+          </View>
+        )}
+
         {/* ── Descriptions ── */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Descriptions</Text>
@@ -84,6 +164,9 @@ export default function ItemDetail() {
                 </Text>
               </View>
             ))}
+            {item.specifications.length === 0 && (
+              <Text style={styles.emptyText}>No specification details yet.</Text>
+            )}
           </View>
         </View>
 
@@ -110,20 +193,35 @@ export default function ItemDetail() {
               <Text style={[styles.tableCell, styles.tableHeaderText, { flex: 1.5 }]}>Edition</Text>
               <Text style={[styles.tableCell, styles.tableHeaderText, { flex: 1.8 }]}>Price</Text>
             </View>
-            {item.purchaseItems.map((row, idx) => (
-              <View
-                key={row.id}
-                style={[styles.tableRow, idx < item.purchaseItems.length - 1 && styles.tableRowBorder]}
-              >
-                <Text style={[styles.tableCell, { flex: 1.2 }]}>{row.id}</Text>
-                <Text style={[styles.tableCell, { flex: 1.5 }]}>{row.edition}</Text>
-                <View style={[styles.tablePriceCell, { flex: 1.8 }]}>
-                  <POL_ICON />
-                  <Text style={styles.tablePriceLabel}>POL</Text>
-                  <Text style={styles.tablePriceAmount}>{row.price}</Text>
+            <ScrollView
+              style={styles.purchaseRowsScroll}
+              nestedScrollEnabled
+              showsVerticalScrollIndicator
+            >
+              {item.purchaseItems.map((row, idx) => (
+                <View
+                  key={row.id}
+                  style={[styles.tableRow, idx < item.purchaseItems.length - 1 && styles.tableRowBorder]}
+                >
+                  <Text
+                    style={[styles.tableCell, styles.tableIdCell, { flex: 1.2 }]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {row.id}
+                  </Text>
+                  <Text style={[styles.tableCell, { flex: 1.5 }]}>{row.edition}</Text>
+                  <View style={[styles.tablePriceCell, { flex: 1.8 }]}> 
+                    <POL_ICON />
+                    <Text style={styles.tablePriceLabel}>POL</Text>
+                    <Text style={styles.tablePriceAmount}>{row.price}</Text>
+                  </View>
                 </View>
-              </View>
-            ))}
+              ))}
+              {item.purchaseItems.length === 0 && (
+                <Text style={styles.emptyTableText}>No purchasable items available yet.</Text>
+              )}
+            </ScrollView>
           </View>
         </View>
 
@@ -152,6 +250,9 @@ export default function ItemDetail() {
                 <Text style={[styles.tableCell, { flex: 1, fontSize: 11 }]}>{row.to}</Text>
               </View>
             ))}
+            {item.activity.length === 0 && (
+              <Text style={styles.emptyTableText}>No activity yet.</Text>
+            )}
           </View>
         </View>
 
@@ -191,6 +292,34 @@ const styles = StyleSheet.create({
   brandCircleText: { color: '#fff', fontSize: 11, fontWeight: '700' },
   heroBrandName: { color: '#fff', fontSize: 14, fontWeight: '600' },
 
+  loadingWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    gap: 8,
+  },
+  loadingText: {
+    fontSize: 13,
+    color: '#555',
+  },
+  errorWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    paddingHorizontal: 16,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#b91c1c',
+    textAlign: 'center',
+  },
+  errorSubText: {
+    fontSize: 11,
+    color: '#777',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+
   // Sections
   section: { marginTop: 24, paddingHorizontal: 16 },
   sectionTitle: { fontSize: 18, fontWeight: '800', color: '#111', marginBottom: 10 },
@@ -201,6 +330,11 @@ const styles = StyleSheet.create({
   specPill: {
     backgroundColor: '#111', borderRadius: 30,
     paddingHorizontal: 18, paddingVertical: 10,
+  },
+  emptyText: {
+    color: '#777',
+    fontSize: 12,
+    fontStyle: 'italic',
   },
   specPillText: { color: '#fff', fontSize: 14, fontWeight: '500' },
   specPillLabel: { fontWeight: '700' },
@@ -235,6 +369,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 8,
   },
+  purchaseRowsScroll: {
+    maxHeight: 260,
+  },
   tableHeader: { marginBottom: 4 },
   tableHeaderText: { fontWeight: '700', fontStyle: 'italic', fontSize: 14, color: '#222' },
   tableRow: {
@@ -243,7 +380,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12, paddingHorizontal: 4,
   },
   tableRowBorder: {
-    // inner row card style
     backgroundColor: '#fff',
     borderRadius: 10,
     marginVertical: 4,
@@ -254,7 +390,15 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   tableCell: { flex: 1, fontSize: 13, color: '#333' },
+  tableIdCell: { flexShrink: 1, paddingRight: 4 },
   tablePriceCell: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   tablePriceLabel: { fontSize: 13, fontWeight: '700', color: '#111' },
   tablePriceAmount: { fontSize: 13, color: '#333' },
+  emptyTableText: {
+    paddingVertical: 10,
+    textAlign: 'center',
+    color: '#777',
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
 });

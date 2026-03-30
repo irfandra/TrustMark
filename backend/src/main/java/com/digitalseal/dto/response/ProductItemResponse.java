@@ -18,8 +18,8 @@ public class ProductItemResponse {
     @Schema(description = "Item ID", example = "1")
     private Long id;
     
-    @Schema(description = "Product ID", example = "1")
-    private Long productId;
+    @Schema(description = "Product ID", example = "A1B2C3")
+    private String productId;
     
     @Schema(description = "Product name", example = "Louis Vuitton Speedy 30")
     private String productName;
@@ -38,6 +38,15 @@ public class ProductItemResponse {
     
     @Schema(description = "Mint transaction hash")
     private String mintTxHash;
+
+    @Schema(description = "QR payload for NFT ownership proof")
+    private String nftQrCode;
+
+    @Schema(description = "QR payload printed on product label")
+    private String productLabelQrCode;
+
+    @Schema(description = "QR payload printed on certificate")
+    private String certificateQrCode;
     
     @Schema(description = "Digital seal status", example = "PRE_MINTED")
     private SealStatus sealStatus;
@@ -47,6 +56,9 @@ public class ProductItemResponse {
     
     @Schema(description = "Current owner user ID")
     private Long currentOwnerId;
+
+    @Schema(description = "Current owner username")
+    private String currentOwnerUsername;
     
     @Schema(description = "When the seal was minted")
     private LocalDateTime mintedAt;

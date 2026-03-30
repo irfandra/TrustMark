@@ -7,7 +7,6 @@ import com.digitalseal.model.entity.ProductCategory;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -30,15 +29,6 @@ public class CreateProductRequest {
     @Schema(description = "Product category", example = "HANDBAG")
     private ProductCategory category;
     
-    @NotBlank(message = "SKU is required")
-    @Size(max = 100, message = "SKU must not exceed 100 characters")
-    @Schema(description = "Stock Keeping Unit", example = "LV-SPEEDY-30-MONO")
-    private String sku;
-    
-    @Size(max = 100, message = "Serial number must not exceed 100 characters")
-    @Schema(description = "Unique serial number", example = "SN-2026-00001")
-    private String serialNumber;
-    
     @Schema(description = "Product image URL", example = "https://example.com/product.png")
     private String imageUrl;
     
@@ -47,14 +37,6 @@ public class CreateProductRequest {
     
     @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than 0")
     @Digits(integer = 10, fraction = 8, message = "Invalid price format")
-    @Schema(description = "Price per unit in cryptocurrency", example = "0.5")
+    @Schema(description = "Price per unit", example = "0.5")
     private BigDecimal price;
-    
-    @Size(max = 10, message = "Currency must not exceed 10 characters")
-    @Schema(description = "Currency (default MATIC)", example = "MATIC")
-    private String currency;
-    
-    @Min(value = 1, message = "Total quantity must be at least 1")
-    @Schema(description = "Total number of units to produce", example = "100")
-    private Integer totalQuantity;
 }

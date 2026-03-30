@@ -48,6 +48,23 @@ public class Collection {
     
     @Column(name = "release_date")
     private LocalDate releaseDate;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    @Builder.Default
+    private CollectionStatus status = CollectionStatus.DRAFT;
+
+    @Column(name = "tag", length = 50)
+    private String tag;
+
+    @Column(name = "sales_end_at")
+    private LocalDateTime salesEndAt;
+
+    @Column(name = "tag_color", length = 20)
+    private String tagColor;
+
+    @Column(name = "tag_text_color", length = 20)
+    private String tagTextColor;
     
     @Builder.Default
     @OneToMany(mappedBy = "collection", cascade = CascadeType.ALL)

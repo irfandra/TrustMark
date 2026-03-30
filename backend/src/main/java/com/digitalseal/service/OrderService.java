@@ -53,32 +53,34 @@ public class OrderService {
      * Create a purchase order for a listed product. Reserves the next available item.
      */
     @Transactional
-    public OrderResponse createOrder(Long buyerId, Long productId, CreateOrderRequest request) {
+    public OrderResponse createOrder(Long buyerId, String productId, CreateOrderRequest request) {
         User buyer = userRepository.findById(buyerId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         
-        Product product = productRepository.findById(productId)
+        Product product = productRepository.findByProductCode(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
         
         if (product.getStatus() != ProductStatus.LISTED) {
             throw new InvalidStateException("Product is not available for purchase. Status: " + product.getStatus());
         }
         
-        if (product.getAvailableQuantity() <= 0) {
+        long availableQuantity = productItemRepository.countByProductIdAndSealStatus(product.getId(), SealStatus.PRE_MINTED);
+        if (availableQuantity <= 0) {
             throw new InvalidStateException("Product is sold out");
         }
         
         // Reserve the next available product item
-        ProductItem item = productItemRepository.findFirstAvailableItem(productId)
+        ProductItem item = productItemRepository.findFirstAvailableItem(product.getId())
                 .orElseThrow(() -> new InvalidStateException("No available items for this product"));
         
         item.setSealStatus(SealStatus.RESERVED);
         productItemRepository.save(item);
         
-        // Decrement available quantity
-        product.setAvailableQuantity(product.getAvailableQuantity() - 1);
-        if (product.getAvailableQuantity() == 0) {
+        long availableAfterReservation = productItemRepository.countByProductIdAndSealStatus(product.getId(), SealStatus.PRE_MINTED);
+        if (availableAfterReservation == 0) {
             product.setStatus(ProductStatus.SOLD_OUT);
+        } else if (product.getStatus() == ProductStatus.SOLD_OUT) {
+            product.setStatus(ProductStatus.LISTED);
         }
         productRepository.save(product);
         
@@ -93,7 +95,6 @@ public class OrderService {
                 .quantity(1)
                 .unitPrice(product.getPrice())
                 .totalPrice(product.getPrice())
-                .currency(product.getCurrency())
                 .shippingAddress(request.getShippingAddress())
                 .status(OrderStatus.PENDING)
                 .build();
@@ -108,7 +109,7 @@ public class OrderService {
                 "Order: " + orderNumber
                 + " | Product: " + product.getProductName()
                 + " | Item: " + item.getItemSerial()
-                + " | Price: " + order.getTotalPrice() + " " + order.getCurrency());
+                + " | Price: " + order.getTotalPrice());
 
         return mapToResponse(saved);
     }
@@ -141,7 +142,9 @@ public class OrderService {
     }
     
     /**
-     * Brand processes the order (PAYMENT_RECEIVED → PROCESSING)
+     * Brand processes the order.
+     * Supports direct collector request acceptance by auto-confirming payment:
+     * PENDING (with buyer wallet) -> PAYMENT_RECEIVED -> PROCESSING.
      */
     @Transactional
     public OrderResponse processOrder(Long userId, Long orderId) {
@@ -151,8 +154,21 @@ public class OrderService {
         // Verify brand ownership
         verifyBrandOwnerForOrder(userId, order);
         
+        if (order.getStatus() == OrderStatus.PENDING) {
+            String buyerWallet = order.getBuyerWallet();
+            if (buyerWallet == null || buyerWallet.isBlank()) {
+                throw new InvalidStateException("Buyer wallet is required before creator can accept request.");
+            }
+
+            if (order.getPaymentTxHash() == null || order.getPaymentTxHash().isBlank()) {
+                order.setPaymentTxHash("AUTO_ACCEPTED_" + UUID.randomUUID().toString().replace("-", ""));
+            }
+            order.setPaymentConfirmedAt(LocalDateTime.now());
+            order.setStatus(OrderStatus.PAYMENT_RECEIVED);
+        }
+
         if (order.getStatus() != OrderStatus.PAYMENT_RECEIVED) {
-            throw new InvalidStateException("Only PAYMENT_RECEIVED orders can be processed. Status: " + order.getStatus());
+            throw new InvalidStateException("Only PENDING or PAYMENT_RECEIVED orders can be processed. Status: " + order.getStatus());
         }
         
         order.setStatus(OrderStatus.PROCESSING);
@@ -325,10 +341,9 @@ public class OrderService {
         if (item != null && item.getSealStatus() == SealStatus.RESERVED) {
             item.setSealStatus(SealStatus.PRE_MINTED);
             productItemRepository.save(item);
-            
-            // Re-increment available quantity
+
+            // Availability is derived from PRE_MINTED item count
             Product product = order.getProduct();
-            product.setAvailableQuantity(product.getAvailableQuantity() + 1);
             if (product.getStatus() == ProductStatus.SOLD_OUT) {
                 product.setStatus(ProductStatus.LISTED);
             }
@@ -378,15 +393,15 @@ public class OrderService {
     /**
      * Get all orders for a product (brand owner only, paginated)
      */
-    public Page<OrderResponse> getOrdersByProduct(Long userId, Long productId, Pageable pageable) {
-        Product product = productRepository.findById(productId)
+    public Page<OrderResponse> getOrdersByProduct(Long userId, String productId, Pageable pageable) {
+        Product product = productRepository.findByProductCode(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
         
         if (!product.getBrand().getUser().getId().equals(userId)) {
             throw new UnauthorizedException("You don't own this product's brand");
         }
         
-        return orderRepository.findByProductId(productId, pageable)
+        return orderRepository.findByProductProductCode(productId, pageable)
                 .map(this::mapToResponse);
     }
     
@@ -398,7 +413,8 @@ public class OrderService {
     
     private void checkProductCompletion(Product product) {
         long completedOrders = orderRepository.countByProductIdAndStatus(product.getId(), OrderStatus.COMPLETED);
-        if (completedOrders >= product.getTotalQuantity()) {
+        long totalItems = productItemRepository.countByProductId(product.getId());
+        if (totalItems > 0 && completedOrders >= totalItems) {
             product.setStatus(ProductStatus.COMPLETED);
             productRepository.save(product);
             log.info("Product '{}' (ID: {}) is now COMPLETED — all items sold and delivered", 
@@ -411,21 +427,44 @@ public class OrderService {
         String random = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
         return "ORD-" + dateStr + "-" + random;
     }
+
+    private String buildUserDisplayName(User user) {
+        if (user == null) {
+            return null;
+        }
+
+        String firstName = user.getFirstName() != null ? user.getFirstName().trim() : "";
+        String lastName = user.getLastName() != null ? user.getLastName().trim() : "";
+
+        String fullName = (firstName + " " + lastName).trim();
+        if (!fullName.isEmpty()) {
+            return fullName;
+        }
+
+        if (user.getUserName() != null && !user.getUserName().isBlank()) {
+            return user.getUserName();
+        }
+
+        return user.getEmail();
+    }
     
     private OrderResponse mapToResponse(Order order) {
         return OrderResponse.builder()
                 .id(order.getId())
                 .orderNumber(order.getOrderNumber())
-                .productId(order.getProduct().getId())
+            .productId(order.getProduct().getProductCode())
                 .productName(order.getProduct().getProductName())
                 .productItemId(order.getProductItem() != null ? order.getProductItem().getId() : null)
                 .itemSerial(order.getProductItem() != null ? order.getProductItem().getItemSerial() : null)
                 .buyerId(order.getBuyer().getId())
+                .buyerUsername(order.getBuyer().getUserName())
+                .buyerName(buildUserDisplayName(order.getBuyer()))
+                .buyerPhoneNumber(order.getBuyer().getPhoneNumber())
+                .brandOwnerUsername(order.getProduct().getBrand().getUser().getUserName())
                 .buyerWallet(order.getBuyerWallet())
                 .quantity(order.getQuantity())
                 .unitPrice(order.getUnitPrice())
                 .totalPrice(order.getTotalPrice())
-                .currency(order.getCurrency())
                 .paymentTxHash(order.getPaymentTxHash())
                 .status(order.getStatus())
                 .shippingAddress(order.getShippingAddress())
@@ -436,6 +475,8 @@ public class OrderService {
                 .shippedAt(order.getShippedAt())
                 .deliveredAt(order.getDeliveredAt())
                 .completedAt(order.getCompletedAt())
+                .cancelledAt(order.getCancelledAt())
+                .cancellationReason(order.getCancellationReason())
                 .build();
     }
 }
