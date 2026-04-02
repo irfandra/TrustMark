@@ -1,6 +1,6 @@
-# The Digital Seal
+# TrustMark
 
-Blockchain-based luxury product authentication platform. Physical luxury items are represented as ERC-721 NFTs (Digital Seals), enabling brands to mint, sell, and track provenance — and buyers to verify authenticity and claim ownership via QR scan.
+Creator-focused product authentication platform with off-chain QR lifecycle records, brand catalog management, and order fulfillment workflows.
 
 ---
 
@@ -11,10 +11,8 @@ Blockchain-based luxury product authentication platform. Physical luxury items a
 3. [Environment Variables](#environment-variables)
 4. [Docker / Database](#docker--database)
 5. [API Reference](#api-reference)
-6. [Smart Contract](#smart-contract)
-7. [IPFS / Pinata](#ipfs--pinata)
-8. [Security](#security)
-9. [Production Deployment](#production-deployment)
+6. [Security](#security)
+7. [Production Deployment](#production-deployment)
 
 ---
 
@@ -24,11 +22,10 @@ Blockchain-based luxury product authentication platform. Physical luxury items a
 |---|---|
 | Backend API | Spring Boot 3.2, Java 21 |
 | Database | MySQL 8.0 (Docker) |
-| Security | Spring Security + JWT |
-| Blockchain | Web3j → Hardhat local / Polygon |
+| Security | Spring Security + CORS policy |
+| QR + Identity | Off-chain QR payload lifecycle |
 | ORM / Migration | Hibernate JPA + Flyway |
-| Smart Contract | Solidity 0.8, ERC-721 |
-| IPFS | Pinata |
+| Client App | Expo Router + React Native |
 
 ---
 
@@ -49,7 +46,7 @@ docker-compose up -d
 
 # 2. Copy and configure environment
 cp .env.example .env
-# Edit .env — set DB_PASSWORD, JWT_SECRET, CONTRACT_ADDRESS, etc.
+# Edit .env — set DB_PASSWORD and CORS_ORIGINS.
 
 # 3. Build and run
 mvn clean install
@@ -85,11 +82,6 @@ Create `backend/.env` (never commit it):
 DB_USERNAME=root
 DB_PASSWORD=your_password
 DATABASE_MODE=validate
-
-JWT_SECRET=your-256-bit-secret-key-minimum-32-chars
-
-WEB3_RPC_URL=http://127.0.0.1:8545
-CONTRACT_ADDRESS=0x...
 
 CORS_ORIGINS=http://localhost:3000,http://localhost:8081
 ```
@@ -145,97 +137,16 @@ Base URL: `http://localhost:8080/api/v1`
 Interactive docs: `http://localhost:8080/api/v1/swagger-ui.html`  
 OpenAPI JSON: `http://localhost:8080/api/v1/v3/api-docs`
 
-### Authentication Endpoints
+### Core Endpoints
 
-| Method | Path | Description | Auth |
-|---|---|---|---|
-| POST | `/auth/register` | Email registration | No |
-| POST | `/auth/login` | Email login | No |
-| GET | `/auth/wallet/nonce` | Get wallet nonce | No |
-| POST | `/auth/wallet/register` | Wallet registration | No |
-| POST | `/auth/wallet/login` | Wallet login | No |
-| POST | `/auth/refresh` | Refresh access token | No |
-| POST | `/auth/logout` | Revoke refresh token | No |
+| Method | Path | Description |
+|---|---|---|
+| GET | `/brands` | List brands |
+| GET | `/collections` | List collections |
+| GET | `/products` | List products |
+| GET | `/orders` | List orders |
 
-### Email Registration
-
-```bash
-curl -X POST http://localhost:8080/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "SecurePass123!",
-    "firstName": "John",
-    "lastName": "Doe",
-    "role": "OWNER"
-  }'
-```
-
-Response `201 Created`:
-```json
-{
-  "success": true,
-  "data": {
-    "accessToken": "eyJ...",
-    "refreshToken": "...",
-    "tokenType": "Bearer",
-    "expiresIn": 86400000,
-    "user": { "id": 1, "email": "user@example.com", "role": "OWNER", "authType": "EMAIL" }
-  },
-  "message": "Registration successful"
-}
-```
-
-### Email Login
-
-```bash
-curl -X POST http://localhost:8080/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email": "user@example.com", "password": "SecurePass123!"}'
-```
-
-### Wallet Nonce → Register
-
-```bash
-# Step 1: get nonce
-curl "http://localhost:8080/api/v1/auth/wallet/nonce?address=0x742d35..."
-
-# Step 2: sign the returned message with MetaMask / WalletConnect
-
-# Step 3: register
-curl -X POST http://localhost:8080/api/v1/auth/wallet/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "walletAddress": "0x742d35...",
-    "signature": "0xabc...",
-    "message": "Sign this message to authenticate with Digital Seal: <nonce>",
-    "firstName": "John",
-    "role": "OWNER"
-  }'
-```
-
-### Using Protected Endpoints
-
-```bash
-curl -H "Authorization: Bearer <accessToken>" \
-  http://localhost:8080/api/v1/some/protected/endpoint
-```
-
-In Swagger UI: click **Authorize**, enter `Bearer <accessToken>`.
-
-### Token Refresh / Logout
-
-```bash
-# Refresh
-curl -X POST http://localhost:8080/api/v1/auth/refresh \
-  -H "Content-Type: application/json" \
-  -d '{"refreshToken": "<token>"}'
-
-# Logout
-curl -X POST http://localhost:8080/api/v1/auth/logout \
-  -H "Content-Type: application/json" \
-  -d '{"refreshToken": "<token>"}'
-```
+All endpoints currently run in no-auth mode.
 
 ### Standard Response Format
 
@@ -254,99 +165,8 @@ Error:
 | HTTP | Code | Meaning |
 |---|---|---|
 | 400 | `VALIDATION_ERROR` | Bad request body |
-| 401 | `INVALID_CREDENTIALS` | Wrong email/password or invalid signature |
-| 409 | `EMAIL_ALREADY_EXISTS` | Duplicate registration |
-| 423 | `ACCOUNT_LOCKED` | 5 consecutive failed logins |
-
-### Password Requirements
-
-- Minimum 8 characters
-- At least one uppercase, lowercase, digit, and special character (`@#$%^&+=!`)
-
-### User Roles
-
-- `OWNER` — luxury product buyer/owner
-- `BRAND` — brand representative managing products
-
----
-
-## Smart Contract
-
-Located in `smartcontract/` (Truffle, LuxuryDigitalTwin ERC-721 on Polygon) and `blockchain/` (Hardhat, DigitalSeal — active deployment).
-
-Deployed contract address: set `CONTRACT_ADDRESS` in `.env`.
-
-### LuxuryDigitalTwin Features
-
-- Authorized brands mint Digital Twins for luxury products
-- Unique serial number per NFT → on-chain authenticity verification
-- IPFS metadata storage for decentralized access
-- Transfer history tracking (repairs, appraisals, ownership)
-
-### Compile & Deploy (Truffle)
-
-```bash
-cd smartcontract
-npm install
-npm install -g truffle
-truffle compile
-truffle migrate --network <network-name>
-truffle test
-```
-# 1. Go to blockchain folder
-cd /Users/irfanrahmanindra/Documents/GitHub/The-Digital-Seal/blockchain
-
-# 2. Clear old files
-rm -rf node_modules package-lock.json
-
-# 3. Install dependencies
-npm install
-
-# 4. Verify
-npx hardhat --version
-# Should show: hardhat/X.X.X
-
-# 5. Run hardhat node
-npx hardhat node
-# Should start on http://127.0.0.1:8545
----
-
-## IPFS / Pinata
-
-NFT metadata is stored on IPFS via Pinata.
-
-### Setup
-
-1. Go to https://app.pinata.cloud → sign up (free, 1 GB)
-2. **API Keys** → **New Key** → Admin permissions → copy the JWT
-3. Add to `smartcontract/.env`:
-   ```env
-   PINATA_JWT=eyJhbGci...
-   ```
-
-### Upload Metadata
-
-```bash
-node smartcontract/ipfs-utils/pinata-upload.js
-```
-
-Or programmatically:
-
-```javascript
-const { uploadNFT } = require('./ipfs-utils/pinata-upload');
-
-const product = {
-  name: 'Rolex Submariner #12345',
-  brand: 'Rolex',
-  model: 'Submariner Date',
-  serialNumber: '12345',
-  year: '2020',
-  condition: 'Excellent'
-};
-
-const result = await uploadNFT(product, './product-photo.jpg');
-// result.metadataURI → ipfs://QmXxxxxx
-```
+| 404 | `NOT_FOUND` | Resource does not exist |
+| 409 | `CONFLICT` | Duplicate or invalid current state |
 
 ---
 
@@ -354,11 +174,7 @@ const result = await uploadNFT(product, './product-photo.jpg');
 
 | Feature | Implementation |
 |---|---|
-| Password hashing | BCrypt cost factor 12 |
-| Account lockout | 5 failed logins → locked (requires password reset) |
-| JWT access token | HS256, 24-hour expiry |
-| JWT refresh token | 30-day expiry, rotation on refresh |
-| Wallet auth | Web3j signature recovery + nonce replay protection |
+| Authentication | Disabled (public API mode) |
 | CORS | Configurable via `CORS_ORIGINS` env var |
 
 ---
@@ -370,13 +186,10 @@ const result = await uploadNFT(product, './product-photo.jpg');
 mvn clean package -DskipTests
 
 # Required environment variables
-export JWT_SECRET=<min-32-char-random-secret>
 export DB_USERNAME=<db-user>
 export DB_PASSWORD=<secure-password>
 export DATABASE_MODE=validate
 export CORS_ORIGINS=https://yourdomain.com
-export CONTRACT_ADDRESS=0x...
-export WEB3_RPC_URL=https://polygon-amoy.infura.io/v3/<key>
 
 # Run
 java -jar target/backend-1.0.0.jar
@@ -396,5 +209,4 @@ logging:
 |---|---|
 | Port in use | Change `server.port` in `application.yml` |
 | DB connection error | Verify MySQL running, check credentials, ensure `digital_seal` DB exists |
-| JWT errors | Ensure `JWT_SECRET` ≥ 32 characters |
 | CORS errors | Add frontend URL to `CORS_ORIGINS` |

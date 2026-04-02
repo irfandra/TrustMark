@@ -10,7 +10,6 @@ import com.digitalseal.model.entity.CollectionStatus;
 import com.digitalseal.repository.BrandRepository;
 import com.digitalseal.repository.CollectionRepository;
 import com.digitalseal.repository.ProductRepository;
-import com.digitalseal.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,7 +26,6 @@ public class CollectionService {
     private final CollectionRepository collectionRepository;
     private final BrandRepository brandRepository;
     private final ProductRepository productRepository;
-    private final UserRepository userRepository;
     
     /**
      * Create a new collection under a brand
@@ -51,7 +49,6 @@ public class CollectionService {
                 .releaseDate(request.getReleaseDate())
             .status(request.getStatus() != null ? request.getStatus() : CollectionStatus.DRAFT)
             .tag(request.getTag())
-            .salesEndAt(request.getSalesEndAt())
             .tagColor(request.getTagColor())
             .tagTextColor(request.getTagTextColor())
                 .build();
@@ -125,9 +122,6 @@ public class CollectionService {
         if (request.getTag() != null) {
             collection.setTag(request.getTag());
         }
-        if (request.getSalesEndAt() != null) {
-            collection.setSalesEndAt(request.getSalesEndAt());
-        }
         if (request.getTagColor() != null) {
             collection.setTagColor(request.getTagColor());
         }
@@ -161,16 +155,9 @@ public class CollectionService {
      * Verify the user owns the brand
      */
     private Brand verifyBrandOwnership(Long userId, Long brandId) {
-        userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        
         Brand brand = brandRepository.findById(brandId)
                 .orElseThrow(() -> new RuntimeException("Brand not found"));
-        
-        if (!brand.getUser().getId().equals(userId)) {
-            throw new RuntimeException("You don't own this brand");
-        }
-        
+
         return brand;
     }
     
@@ -188,7 +175,6 @@ public class CollectionService {
                 .releaseDate(collection.getReleaseDate())
             .status(collection.getStatus())
             .tag(collection.getTag())
-            .salesEndAt(collection.getSalesEndAt())
             .tagColor(collection.getTagColor())
             .tagTextColor(collection.getTagTextColor())
                 .productCount(productCount)

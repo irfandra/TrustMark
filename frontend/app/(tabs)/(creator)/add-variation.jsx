@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import {
-  SafeAreaView, ScrollView, View, Text, StyleSheet, TouchableOpacity,
+  ScrollView, View, Text, StyleSheet, TouchableOpacity,
   TextInput, Switch, Modal, FlatList,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // ── Specs Options ──────────────────────────────────────────
 const SPEC_CATEGORIES = ['Size', 'Color', 'Material', 'Year'];
@@ -109,7 +110,7 @@ export default function AddVariation() {
 
             <View style={s.formRow}>
               <View style={[s.formGroup, { flex: 1 }]}>
-                <Text style={s.formLabel}>Price (POL) *</Text>
+                <Text style={s.formLabel}>Price (USD) *</Text>
                 <TextInput
                   style={s.formInput}
                   placeholder="0"
@@ -205,7 +206,7 @@ export default function AddVariation() {
               </View>
               <View style={s.summaryRow}>
                 <Text style={s.summaryLabel}>Price</Text>
-                <Text style={s.summaryValue}>{formData.price ? `${formData.price} POL` : '—'}</Text>
+                <Text style={s.summaryValue}>{formData.price ? `${formData.price} USD` : '—'}</Text>
               </View>
               <View style={s.summaryRow}>
                 <Text style={s.summaryLabel}>Quantity</Text>

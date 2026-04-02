@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useCallback, useEffect, useState } from "react";
 import {
-  Animated,
   Dimensions,
   RefreshControl,
   ScrollView,
@@ -11,23 +10,27 @@ import {
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import CollectionCard from "@/components/card/CollectionCard";
 import { collectionService } from "@/services/collectionService";
 import LoadingPulse from "@/components/shared/loading-pulse";
+import { createCreatorFilterTabsStyle } from "@/constants/creator-filter-tabs";
 
 const { width: screenWidth } = Dimensions.get("window");
 const isTablet = screenWidth >= 768;
 
 export default function CollectionScreen() {
   const router = useRouter();
+  const tabBarHeight = useBottomTabBarHeight();
   const [activeTab, setActiveTab] = useState("All");
   const [openDraft, setOpenDraft] = useState(false);
-  const [openListed, setOpenListed] = useState(false);
-  const [openExpired, setOpenExpired] = useState(false);
+  const [openActive, setOpenActive] = useState(false);
+  const [openInactive, setOpenInactive] = useState(false);
   const [collections, setCollections] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loadError, setLoadError] = useState("");
+  const filterTabs = createCreatorFilterTabsStyle({ isTablet, fill: true });
 
   const loadCollections = useCallback(async (showInitialLoader = true) => {
     try {
@@ -58,7 +61,11 @@ export default function CollectionScreen() {
   }, [loadCollections]);
 
   // Accordion component
-  function Accordion({ title, icon, open, setOpen, data }) {
+  function Accordion({ title, open, setOpen, data }) {
+    const countLabel = `${data.length} ${data.length === 1 ? "Collection" : "Collections"}`;
+    const statusDotColor =
+      title === "Draft" ? "#D95F47" : title === "Active" ? "#2D7A4E" : "#8A7C6A";
+
     return (
       <View style={styles.accordionContainer}>
         <TouchableOpacity
@@ -66,59 +73,72 @@ export default function CollectionScreen() {
           activeOpacity={0.8}
           onPress={() => setOpen((prev) => !prev)}
         >
-          <Text style={styles.accordionTitle}>{title}</Text>
-          {icon}
+          <View style={styles.accordionHeaderLeft}>
+            <View style={styles.accordionTitleRow}>
+              <View style={[styles.accordionStatusDot, { backgroundColor: statusDotColor }]} />
+              <Text style={styles.accordionTitle}>{title}</Text>
+            </View>
+            <Text style={styles.accordionCount}>{countLabel}</Text>
+          </View>
+
+          <View style={styles.accordionChevronWrap}>
           <Ionicons
             name={open ? "chevron-up" : "chevron-down"}
-            size={22}
-            color="#fff"
+            size={18}
+            color="#000000"
           />
+          </View>
         </TouchableOpacity>
+
         {open && (
-          <>
-            {open && (
-              <Animated.View style={styles.accordionContent}>
-                <View style={styles.grid}>
-                  {data.map((collection) => (
-                    <CollectionCard
-                      key={collection.id}
-                      tag={collection.tag}
-                      brand={collection.brand}
-                      brandLogo={collection.brandLogo}
-                      name={collection.title}
-                      category={collection.subtitle}
-                      items={collection.itemsCount}
-                      sold={collection.soldCount}
-                      floorPrice={collection.floorPrice}
-                      floorUsd={collection.floorUsd}
-                      image={collection.image}
-                      saleEndsInDays={collection.saleEndsInDays}
-                      saleEndsInSeconds={collection.saleEndsInSeconds}
-                      style={styles.collectionCardWrapper}
-                      onPress={() =>
-                        router.push({
-                          pathname: "/(tabs)/(creator)/collection-detail",
-                          params: {
-                            collectionId: collection.id,
-                            title: collection.title,
-                            subtitle: collection.subtitle,
-                            status: collection.status,
-                            tag: collection.tag,
-                            tagColor: collection.tagColor,
-                            tagTextColor: collection.tagTextColor,
-                            itemsCount: String(collection.itemsCount ?? 0),
-                            items: collection.items,
-                            brand: collection.brand,
-                            image: encodeURIComponent(collection.image),
-                          },
-                        })
-                      }
-                    />
-                  ))}
-                </View>
-              </Animated.View>
+          <View style={styles.accordionContent}>
+            {data.length === 0 ? (
+              <Text style={styles.accordionEmptyText}>No collections in this section.</Text>
+            ) : (
+              <View style={styles.listStack}>
+                {data.map((collection) => (
+                  <CollectionCard
+                    key={collection.id}
+                    tag={collection.tag}
+                    tagColor={collection.tagColor}
+                    tagTextColor={collection.tagTextColor}
+                    brand={collection.brand}
+                    brandLogo={collection.brandLogo}
+                    name={collection.title}
+                    category={collection.subtitle}
+                    items={collection.itemsCount}
+                    sold={collection.soldCount}
+                    inStock={Math.max(
+                      Number(collection.itemsCount ?? 0) - Number(collection.soldCount ?? 0),
+                      0
+                    )}
+                    floorPrice={collection.floorPrice}
+                    floorUsd={collection.floorUsd}
+                    image={collection.image}
+                    style={styles.collectionCardWrapper}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/(tabs)/(creator)/collection-detail",
+                        params: {
+                          collectionId: collection.id,
+                          title: collection.title,
+                          subtitle: collection.subtitle,
+                          status: collection.status,
+                          tag: collection.tag,
+                          tagColor: collection.tagColor,
+                          tagTextColor: collection.tagTextColor,
+                          itemsCount: String(collection.itemsCount ?? 0),
+                          items: collection.items,
+                          brand: collection.brand,
+                          image: encodeURIComponent(collection.image),
+                        },
+                      })
+                    }
+                  />
+                ))}
+              </View>
             )}
-          </>
+          </View>
         )}
       </View>
     );
@@ -130,7 +150,7 @@ export default function CollectionScreen() {
         style={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#111" />
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#1E2C3A" />
         }
       >
         {/* Title */}
@@ -138,65 +158,67 @@ export default function CollectionScreen() {
      
 
         {/* Tabs */}
-        <View style={styles.tabs}>
-          <TouchableOpacity
-            style={[styles.tabButton, activeTab === "All" && styles.activeTab]}
-            onPress={() => setActiveTab("All")}
-          >
-            <Text
-              style={[styles.tabText, activeTab === "All" && styles.activeText]}
+        <View style={filterTabs.tabsWrap}>
+          <View style={filterTabs.tabs}>
+            <TouchableOpacity
+              style={[filterTabs.tabButton, activeTab === "All" && filterTabs.activeTab]}
+              onPress={() => setActiveTab("All")}
             >
-              All
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.tabButton,
-              activeTab === "Draft" && styles.activeTab,
-            ]}
-            onPress={() => setActiveTab("Draft")}
-          >
-            <Text
+              <Text
+                style={[filterTabs.tabText, activeTab === "All" && filterTabs.activeText]}
+              >
+                All
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
               style={[
-                styles.tabText,
-                activeTab === "Draft" && styles.activeText,
+                filterTabs.tabButton,
+                activeTab === "Draft" && filterTabs.activeTab,
               ]}
+              onPress={() => setActiveTab("Draft")}
             >
-              Draft
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.tabButton,
-              activeTab === "Listed" && styles.activeTab,
-            ]}
-            onPress={() => setActiveTab("Listed")}
-          >
-            <Text
+              <Text
+                style={[
+                  filterTabs.tabText,
+                  activeTab === "Draft" && filterTabs.activeText,
+                ]}
+              >
+                Draft
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
               style={[
-                styles.tabText,
-                activeTab === "Listed" && styles.activeText,
+                filterTabs.tabButton,
+                activeTab === "Active" && filterTabs.activeTab,
               ]}
+              onPress={() => setActiveTab("Active")}
             >
-              Listed
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.tabButton,
-              activeTab === "Expired" && styles.activeTab,
-            ]}
-            onPress={() => setActiveTab("Expired")}
-          >
-            <Text
+              <Text
+                style={[
+                  filterTabs.tabText,
+                  activeTab === "Active" && filterTabs.activeText,
+                ]}
+              >
+                Active
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
               style={[
-                styles.tabText,
-                activeTab === "Expired" && styles.activeText,
+                filterTabs.tabButton,
+                activeTab === "Inactive" && filterTabs.activeTab,
               ]}
+              onPress={() => setActiveTab("Inactive")}
             >
-              Expired
-            </Text>
-          </TouchableOpacity>
+              <Text
+                style={[
+                  filterTabs.tabText,
+                  activeTab === "Inactive" && filterTabs.activeText,
+                ]}
+              >
+                Inactive
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {isLoading && (
@@ -232,23 +254,23 @@ export default function CollectionScreen() {
               />
             )}
 
-            {/* Listed Section Accordion */}
-            {(activeTab === "Listed" || activeTab === "All") && (
+            {/* Active Section Accordion */}
+            {(activeTab === "Active" || activeTab === "All") && (
               <Accordion
-                title="Listed"
-                open={openListed}
-                setOpen={setOpenListed}
-                data={collections.filter((c) => c.status === "Listed")}
+                title="Active"
+                open={openActive}
+                setOpen={setOpenActive}
+                data={collections.filter((c) => c.status === "Active")}
               />
             )}
 
-            {/* Expired Section Accordion */}
-            {(activeTab === "Expired" || activeTab === "All") && (
+            {/* Inactive Section Accordion */}
+            {(activeTab === "Inactive" || activeTab === "All") && (
               <Accordion
-                title="Expired"
-                open={openExpired}
-                setOpen={setOpenExpired}
-                data={collections.filter((c) => c.status === "Expired")}
+                title="Inactive"
+                open={openInactive}
+                setOpen={setOpenInactive}
+                data={collections.filter((c) => c.status === "Inactive")}
               />
             )}
           </>
@@ -257,7 +279,10 @@ export default function CollectionScreen() {
 
       {/* New Collection Button - Fixed at bottom right */}
       <TouchableOpacity
-        style={styles.newCollectionButton}
+        style={[
+          styles.newCollectionButton,
+          { bottom: tabBarHeight + (isTablet ? 24 : 16) },
+        ]}
         onPress={() => router.push("/(tabs)/(creator)/new-collection")}
       >
         <Text style={styles.newCollectionButtonText}>+ New Collection</Text>
@@ -270,14 +295,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     position: "relative",
-    backgroundColor: "#fff",
+    backgroundColor: "#F6F1E8",
   },
   scrollContent: {
     flex: 1,
     paddingHorizontal: isTablet ? 32 : 16,
     paddingTop: isTablet ? 12 : 8,
     paddingBottom: isTablet ? 160 : 140,
-    backgroundColor: "#fff",
+    backgroundColor: "#F6F1E8",
   },
   listContainer: {
     flexGrow: 1,
@@ -290,37 +315,7 @@ const styles = StyleSheet.create({
     marginTop: 0,
     fontWeight: "600",
     marginBottom: 8,
-  },
-  brandCaption: {
-    fontSize: 13,
-    color: "#666",
-    marginBottom: 6,
-  },
-  tabs: {
-    flexDirection: "row",
-    marginTop: 12,
-    marginBottom: 16,
-    gap: 6,
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: "#bbb",
-    borderRadius: 20,
-    alignItems: "center",
-  },
-  activeTab: {
-    backgroundColor: "#000",
-    borderColor: "#000",
-  },
-  tabText: {
-    fontSize: isTablet ? 13 : 11,
-    color: "#333",
-  },
-  activeText: {
-    color: "#fff",
-    fontWeight: "600",
+    color: "#1A2640",
   },
   loadingWrap: {
     paddingVertical: 24,
@@ -344,7 +339,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   retryBtn: {
-    backgroundColor: "#111",
+    backgroundColor: "#5C57E8",
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 8,
@@ -361,235 +356,96 @@ const styles = StyleSheet.create({
   },
   emptyCollectionsText: {
     fontSize: 13,
-    color: "#666",
-  },
-  card: {
-    width: "48%",
-    marginBottom: 16,
-    borderRadius: 24,
-    overflow: "hidden",
-    backgroundColor: "#4a4a4a",
-    aspectRatio: 0.72,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.22,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  cardBg: {
-    flex: 1,
-    justifyContent: "space-between",
-  },
-  cardBgImage: {
-    resizeMode: "cover",
-  },
-  cardOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.36)",
-  },
-  cardTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 10,
-    paddingTop: 10,
-    gap: 6,
-  },
-  tag: {
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  tagText: {
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  timerWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.16)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.5)",
-    borderRadius: 14,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    flexShrink: 1,
-    maxWidth: "58%",
-    gap: 4,
-  },
-  timerText: {
-    color: "#fff",
-    fontSize: 11,
-    flexShrink: 1,
-  },
-  cardContent: {
-    paddingHorizontal: 10,
-    paddingBottom: 10,
-    gap: 7,
-  },
-  cardBrandRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 2,
-  },
-  brandCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "transparent",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 6,
-    overflow: "hidden",
-  },
-  brandDot: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "#ff8c24",
-  },
-  brandLogo: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-  },
-  cardBrandName: {
-    color: "#fff",
-    fontSize: 10,
-    fontWeight: "700",
-    flex: 1,
-  },
-  cardName: {
-    color: "#fff",
-    fontSize: 17,
-    fontWeight: "800",
-    lineHeight: 21,
-  },
-  cardCollection: {
-    color: "rgba(255,255,255,0.95)",
-    fontSize: 9,
-  },
-  statsRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 2,
-  },
-  statBox: {
-    flex: 1,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.72)",
-    backgroundColor: "rgba(255,255,255,0.21)",
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-  },
-  statHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  statNumber: {
-    color: "#fff",
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  statLabel: {
-    marginTop: 2,
-    color: "#fff",
-    fontSize: 8,
-    fontWeight: "700",
-  },
-  floorBox: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.72)",
-    backgroundColor: "rgba(255,255,255,0.21)",
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-  },
-  floorLabel: {
-    color: "#fff",
-    fontSize: 9,
-    fontWeight: "700",
-    marginBottom: 6,
+    color: "#6C7891",
   },
   accordionContainer: {
-    marginBottom: 10,
-    borderRadius: 12,
+    marginBottom: 12,
+    borderRadius: 18,
     overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#CED5E4",
+    backgroundColor: "#F6F1E8",
+    shadowColor: "#1A2640",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    elevation: 4,
   },
   accordionHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#000",
+    backgroundColor: "#F6F1E8",
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 13,
+  },
+  accordionHeaderLeft: {
+    flex: 1,
+    gap: 2,
+  },
+  accordionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  accordionStatusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 99,
   },
   accordionTitle: {
     fontSize: 16,
-    fontWeight: "700",
-    color: "#fff",
+    fontWeight: "800",
+    color: "#1A2640",
   },
-  accordionContent: {
-    backgroundColor: "#fff",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  collectionCardWrapper: {
-    width: "48%",
-    height: isTablet ? 320 : 280,
-    marginBottom: 12,
-  },
-  cardPriceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
-  polDot: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "#7B3FE4",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  cardPriceToken: {
-    color: "#fff",
+  accordionCount: {
     fontSize: 11,
-    fontWeight: "700",
-  },
-  cardPriceAmount: {
-    color: "#fff",
-    fontSize: 11,
+    color: "#6B7892",
+    marginLeft: 18,
     fontWeight: "600",
   },
-  floorUsd: {
-    color: "rgba(255,255,255,0.75)",
-    fontSize: 10,
-    fontStyle: "italic",
+  accordionChevronWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#CAD2E2",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#ffffff",
   },
-  tabletRow: {
-    justifyContent: "space-between",
-    marginBottom: 24,
+  accordionContent: {
+    backgroundColor: "#F6F1E8",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#D6DDEB",
+  },
+  accordionEmptyText: {
+    fontSize: 13,
+    color: "#6C7891",
+    textAlign: "center",
+    paddingVertical: 8,
+  },
+  listStack: {
+    gap: 12,
+  },
+  collectionCardWrapper: {
+    width: "100%",
+    minHeight: isTablet ? 146 : 132,
   },
   newCollectionButton: {
     position: "absolute",
-    bottom: isTablet ? 40 : 20,
     right: isTablet ? 40 : 20,
-    backgroundColor: "#6b4df5",
+    backgroundColor: "#131317",
     borderRadius: 24,
     paddingVertical: 16,
     paddingHorizontal: 32,
-    shadowColor: "#000",
+    zIndex: 50,
+    shadowColor: "#2A2F66",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
+    shadowOpacity: 0.28,
+    shadowRadius: 14,
     elevation: 8,
   },
   newCollectionButtonText: {

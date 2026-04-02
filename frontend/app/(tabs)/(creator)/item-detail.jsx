@@ -1,19 +1,20 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   RefreshControl,
-  SafeAreaView, ScrollView, View, Text,
+  ScrollView, View, Text,
   ImageBackground, StyleSheet, TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { collectionService } from '@/services/collectionService';
 import LoadingPulse from '@/components/shared/loading-pulse';
 
 const parseParam = (value) => (Array.isArray(value) ? value[0] : value);
 
-const POL_ICON = () => (
+const USD_ICON = () => (
   <View style={styles.polIcon}>
-    <Text style={styles.polIconText}>P</Text>
+    <Text style={styles.polIconText}>$</Text>
   </View>
 );
 
@@ -76,7 +77,7 @@ export default function ItemDetail() {
           itemData.description ||
           'No additional description available for this offchain product.',
         specifications: itemData.specifications,
-        priceToken: 'POL',
+        priceToken: itemData.currency || 'USD',
         priceAmount: itemData.priceAmount,
         priceUsd: itemData.priceUsd,
         purchaseItems: itemData.purchaseItems,
@@ -95,13 +96,43 @@ export default function ItemDetail() {
         : 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=800',
       description: 'No additional description available for this offchain product.',
       specifications: [],
-      priceToken: 'POL',
+      priceToken: parseParam(params.currency) || 'USD',
       priceAmount: parseParam(params.priceAmount) || '--',
       priceUsd: parseParam(params.priceUsd) || '',
       purchaseItems: [],
       activity: [],
     };
   }, [itemData, itemId, params]);
+
+  const itemRows = useMemo(() => {
+    const statusByItemId = new Map(
+      (Array.isArray(item.activity) ? item.activity : []).map((row) => [String(row.itemId), row.status])
+    );
+
+    const purchaseRows = Array.isArray(item.purchaseItems) ? item.purchaseItems : [];
+    const mergedRows = purchaseRows.map((row) => ({
+      itemId: row.id,
+      status: statusByItemId.get(String(row.id)) || 'Unknown',
+      price: row.price || '--',
+    }));
+
+    const existingIds = new Set(mergedRows.map((row) => String(row.itemId)));
+
+    (Array.isArray(item.activity) ? item.activity : []).forEach((row) => {
+      const activityItemId = String(row.itemId);
+      if (existingIds.has(activityItemId)) {
+        return;
+      }
+
+      mergedRows.push({
+        itemId: activityItemId,
+        status: row.status || 'Unknown',
+        price: '--',
+      });
+    });
+
+    return mergedRows;
+  }, [item.activity, item.purchaseItems]);
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -170,89 +201,47 @@ export default function ItemDetail() {
           </View>
         </View>
 
-        {/* ── Purchase Item ── */}
+        {/* ── Product Items ── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Purchase Item</Text>
-
-          {/* Price row */}
-          <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>Price</Text>
-            <View style={styles.priceTokenWrap}>
-              <POL_ICON />
-              <Text style={styles.priceTokenLabel}>{item.priceToken}</Text>
-              <Text style={styles.priceAmount}>{item.priceAmount}</Text>
-            </View>
-            <Text style={styles.priceUsd}>{item.priceUsd}</Text>
-          </View>
-
-          {/* Items table */}
+          <Text style={styles.sectionTitle}>Product Items</Text>
           <View style={styles.table}>
             {/* Table header */}
             <View style={[styles.tableRow, styles.tableHeader]}>
-              <Text style={[styles.tableCell, styles.tableHeaderText, { flex: 1.2 }]}>Items ID</Text>
-              <Text style={[styles.tableCell, styles.tableHeaderText, { flex: 1.5 }]}>Edition</Text>
-              <Text style={[styles.tableCell, styles.tableHeaderText, { flex: 1.8 }]}>Price</Text>
+              <Text style={[styles.tableCell, styles.tableHeaderText, { flex: 1.2 }]}>Item ID</Text>
+              <Text style={[styles.tableCell, styles.tableHeaderText, { flex: 1 }]}>Status</Text>
+              <Text style={[styles.tableCell, styles.tableHeaderText, { flex: 1 }]}>Price</Text>
             </View>
             <ScrollView
               style={styles.purchaseRowsScroll}
               nestedScrollEnabled
               showsVerticalScrollIndicator
             >
-              {item.purchaseItems.map((row, idx) => (
+              {itemRows.map((row, idx) => (
                 <View
-                  key={row.id}
-                  style={[styles.tableRow, idx < item.purchaseItems.length - 1 && styles.tableRowBorder]}
+                  key={`${row.itemId}-${idx}`}
+                  style={[styles.tableRow, idx < itemRows.length - 1 && styles.tableRowBorder]}
                 >
                   <Text
                     style={[styles.tableCell, styles.tableIdCell, { flex: 1.2 }]}
                     numberOfLines={1}
                     ellipsizeMode="tail"
                   >
-                    {row.id}
+                    {row.itemId}
                   </Text>
-                  <Text style={[styles.tableCell, { flex: 1.5 }]}>{row.edition}</Text>
-                  <View style={[styles.tablePriceCell, { flex: 1.8 }]}> 
-                    <POL_ICON />
-                    <Text style={styles.tablePriceLabel}>POL</Text>
+                  <Text style={[styles.tableCell, { flex: 1 }]} numberOfLines={1}>
+                    {row.status}
+                  </Text>
+                  <View style={[styles.tablePriceCell, { flex: 1 }]}> 
+                    <USD_ICON />
+                    <Text style={styles.tablePriceLabel}>USD</Text>
                     <Text style={styles.tablePriceAmount}>{row.price}</Text>
                   </View>
                 </View>
               ))}
-              {item.purchaseItems.length === 0 && (
+              {itemRows.length === 0 && (
                 <Text style={styles.emptyTableText}>No purchasable items available yet.</Text>
               )}
             </ScrollView>
-          </View>
-        </View>
-
-        {/* ── Activity ── */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Activity</Text>
-          <View style={styles.table}>
-            {/* Table header */}
-            <View style={[styles.tableRow, styles.tableHeader]}>
-              {['Event', 'Items', 'Price', 'From', 'To'].map((h) => (
-                <Text key={h} style={[styles.tableCell, styles.tableHeaderText, { flex: 1 }]}>{h}</Text>
-              ))}
-            </View>
-            {item.activity.map((row, idx) => (
-              <View
-                key={idx}
-                style={[styles.tableRow, idx < item.activity.length - 1 && styles.tableRowBorder]}
-              >
-                <Text style={[styles.tableCell, { flex: 1, fontSize: 12 }]}>{row.event}</Text>
-                <Text style={[styles.tableCell, { flex: 1, fontSize: 12 }]}>{row.item}</Text>
-                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-                  <Text style={[styles.tableCell, { fontSize: 11, fontWeight: '700' }]}>POL</Text>
-                  <Text style={{ fontSize: 11 }}>{row.price}</Text>
-                </View>
-                <Text style={[styles.tableCell, { flex: 1, fontSize: 11 }]}>{row.from}</Text>
-                <Text style={[styles.tableCell, { flex: 1, fontSize: 11 }]}>{row.to}</Text>
-              </View>
-            ))}
-            {item.activity.length === 0 && (
-              <Text style={styles.emptyTableText}>No activity yet.</Text>
-            )}
           </View>
         </View>
 
@@ -353,7 +342,7 @@ const styles = StyleSheet.create({
   priceAmount: { fontWeight: '600', fontSize: 15, color: '#111' },
   priceUsd: { fontSize: 14, color: '#888', flex: 1, textAlign: 'right' },
 
-  // POL icon
+  // USD icon
   polIcon: {
     width: 20, height: 20, borderRadius: 10,
     backgroundColor: '#7b5ea7',
@@ -370,7 +359,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   purchaseRowsScroll: {
-    maxHeight: 260,
+    maxHeight: 320,
   },
   tableHeader: { marginBottom: 4 },
   tableHeaderText: { fontWeight: '700', fontStyle: 'italic', fontSize: 14, color: '#222' },

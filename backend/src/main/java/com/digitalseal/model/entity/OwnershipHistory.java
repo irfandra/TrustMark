@@ -10,7 +10,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 /**
- * Immutable record tracking every ownership change of a product item's digital seal.
+ * Immutable record tracking every ownership change of a product item.
  * Creates a complete provenance chain for authenticity verification.
  */
 @Entity
@@ -39,12 +39,6 @@ public class OwnershipHistory {
     @Enumerated(EnumType.STRING)
     @Column(name = "transfer_type", nullable = false, length = 20)
     private TransferType transferType;
-    
-    @Column(name = "tx_hash", length = 66)
-    private String txHash;
-    
-    @Column(name = "block_number")
-    private Long blockNumber;
     
     @Column(name = "notes", length = 500)
     private String notes;

@@ -57,7 +57,7 @@ public class EmailService {
      */
     @Async
     public void sendVerificationEmail(String toEmail, String code, String firstName) {
-        String subject = "Digital Seal - Verify Your Email";
+        String subject = "TrustMark - Verify Your Email";
         String content = buildVerificationEmailContent(code, firstName);
         sendEmail(toEmail, subject, content, true);
     }
@@ -67,7 +67,7 @@ public class EmailService {
      */
     @Async
     public void sendPasswordResetEmail(String toEmail, String code, String firstName) {
-        String subject = "Digital Seal - Password Reset";
+        String subject = "TrustMark - Password Reset";
         String content = buildPasswordResetEmailContent(code, firstName);
         sendEmail(toEmail, subject, content, true);
     }
@@ -79,8 +79,8 @@ public class EmailService {
         return """
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
                     <div style="text-align: center; padding: 20px 0;">
-                        <h1 style="color: #1a1a2e; margin: 0;">Digital Seal</h1>
-                        <p style="color: #666; font-size: 14px;">Luxury Product Authentication</p>
+                        <h1 style="color: #1a1a2e; margin: 0;">TrustMark</h1>
+                        <p style="color: #666; font-size: 14px;">Creator Authentication Platform</p>
                     </div>
                     <div style="background: #f8f9fa; border-radius: 10px; padding: 30px; text-align: center;">
                         <h2 style="color: #1a1a2e;">Verify Your Email</h2>
@@ -95,7 +95,7 @@ public class EmailService {
                         <p style="color: #888; font-size: 13px;">If you didn't create an account, you can safely ignore this email.</p>
                     </div>
                     <div style="text-align: center; padding: 20px 0; color: #aaa; font-size: 12px;">
-                        <p>&copy; 2026 Digital Seal. All rights reserved.</p>
+                        <p>&copy; 2026 TrustMark. All rights reserved.</p>
                     </div>
                 </div>
                 """.formatted(name, code);
@@ -106,8 +106,8 @@ public class EmailService {
         return """
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
                     <div style="text-align: center; padding: 20px 0;">
-                        <h1 style="color: #1a1a2e; margin: 0;">Digital Seal</h1>
-                        <p style="color: #666; font-size: 14px;">Luxury Product Authentication</p>
+                        <h1 style="color: #1a1a2e; margin: 0;">TrustMark</h1>
+                        <p style="color: #666; font-size: 14px;">Creator Authentication Platform</p>
                     </div>
                     <div style="background: #f8f9fa; border-radius: 10px; padding: 30px; text-align: center;">
                         <h2 style="color: #1a1a2e;">Reset Your Password</h2>
@@ -122,7 +122,7 @@ public class EmailService {
                         <p style="color: #888; font-size: 13px;">If you didn't request a password reset, you can safely ignore this email.</p>
                     </div>
                     <div style="text-align: center; padding: 20px 0; color: #aaa; font-size: 12px;">
-                        <p>&copy; 2026 Digital Seal. All rights reserved.</p>
+                        <p>&copy; 2026 TrustMark. All rights reserved.</p>
                     </div>
                 </div>
                 """.formatted(name, code);

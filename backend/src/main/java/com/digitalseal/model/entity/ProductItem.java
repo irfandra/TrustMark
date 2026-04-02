@@ -11,8 +11,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 /**
- * Represents a single unit/item of a product with its own NFT digital seal.
- * Each ProductItem maps to one ERC-721 token on the blockchain.
+ * Represents a single authenticated unit of a product.
  */
 @Entity
 @Table(name = "product_items")
@@ -39,15 +38,8 @@ public class ProductItem {
     @Column(name = "item_index", nullable = false)
     private Integer itemIndex;
     
-    // Blockchain fields
-    @Column(name = "token_id")
-    private Long tokenId;
-    
     @Column(name = "metadata_uri", length = 500)
     private String metadataUri;
-    
-    @Column(name = "mint_tx_hash", length = 66)
-    private String mintTxHash;
     
     // Claim code for QR-based claiming
     @Column(name = "claim_code", unique = true, length = 64)
@@ -56,14 +48,8 @@ public class ProductItem {
     @Column(name = "claim_code_hash", length = 64)
     private String claimCodeHash;
 
-    // Three distinct QR payloads per product item
-    @Column(name = "nft_qr_code", length = 255)
-    private String nftQrCode;
-
-    @Column(name = "product_label_qr_code", length = 255)
-    private String productLabelQrCode;
-
-    @Column(name = "certificate_qr_code", length = 255)
+    // Authentication QR payload for this item. Issued once and immutable.
+    @Column(name = "certificate_qr_code", nullable = false, updatable = false, length = 255)
     private String certificateQrCode;
     
     @Enumerated(EnumType.STRING)
@@ -78,10 +64,6 @@ public class ProductItem {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "current_owner_id")
     private User currentOwner;
-    
-    // Transfer tracking
-    @Column(name = "transfer_tx_hash", length = 66)
-    private String transferTxHash;
     
     @Column(name = "minted_at")
     private LocalDateTime mintedAt;
@@ -99,4 +81,13 @@ public class ProductItem {
     @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @PrePersist
+    private void ensureCertificateQrCode() {
+        if (itemSerial != null
+                && !itemSerial.isBlank()
+                && (certificateQrCode == null || certificateQrCode.isBlank())) {
+            certificateQrCode = "trustmark://certificate/" + itemSerial;
+        }
+    }
 }

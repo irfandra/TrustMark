@@ -9,7 +9,7 @@ export const brandService = {
 
   async getCreatorBrandProfile(brandId = DEFAULT_BRAND_ID) {
     try {
-      const myBrands = await apiRequest('/brands/me', { authRequired: true });
+      const myBrands = await apiRequest('/brands/me');
       if (Array.isArray(myBrands) && myBrands.length > 0) {
         return myBrands[0];
       }

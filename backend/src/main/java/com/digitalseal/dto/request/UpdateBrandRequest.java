@@ -31,9 +31,6 @@ public class UpdateBrandRequest {
     @Schema(description = "Company banner URL", example = "https://example.com/banner.png")
     private String companyBanner;
 
-    @Schema(description = "Signed statement letter URL (PDF)", example = "https://example.com/statement-letter.pdf")
-    private String statementLetterUrl;
-
     @Size(max = 255, message = "Person in charge name must not exceed 255 characters")
     @Schema(description = "Person in charge full name", example = "Gerry Julian")
     private String personInChargeName;

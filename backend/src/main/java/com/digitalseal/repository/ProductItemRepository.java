@@ -22,13 +22,7 @@ public interface ProductItemRepository extends JpaRepository<ProductItem, Long> 
     
     Optional<ProductItem> findByItemSerial(String itemSerial);
     
-    Optional<ProductItem> findByTokenId(Long tokenId);
-    
-    Optional<ProductItem> findByClaimCode(String claimCode);
-    
     Optional<ProductItem> findByIdAndProductId(Long id, Long productId);
-    
-    List<ProductItem> findByCurrentOwnerId(Long userId);
     
     long countByProductId(Long productId);
     

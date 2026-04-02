@@ -19,8 +19,8 @@ const SLIDES = [
   },
   {
     id: 2,
-    title: "NFT as Digital",
-    subtitle: "Certificate Ownership.",
+    title: "Digital Ownership",
+    subtitle: "Certificate Records.",
     image:
       "https://images.unsplash.com/photo-1664022617645-cf71791942e4?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8bmZ0fGVufDB8fDB8fHww",
   },
@@ -87,7 +87,7 @@ export default function AuthLandingScreen() {
           style={styles.backgroundImage}
         >
           <View style={styles.topOverlay} />
-          <Text style={styles.appName}>ZEAL</Text>
+          <Text style={styles.appName}>TRUSTMARK</Text>
         </ImageBackground>
       </View>
 
@@ -117,15 +117,15 @@ export default function AuthLandingScreen() {
       <View style={styles.stickyButtonsContainer}>
         <TouchableOpacity
           style={styles.loginButton}
-          onPress={() => router.push("/(auth)/login")}
+          onPress={() => router.replace("/(tabs)")}
         >
-          <Text style={styles.loginButtonText}>LOGIN</Text>
+          <Text style={styles.loginButtonText}>ENTER APP</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.registerButton}
-          onPress={() => router.push("/(auth)/register")}
+          onPress={() => router.replace("/(tabs)")}
         >
-          <Text style={styles.registerButtonText}>Register</Text>
+          <Text style={styles.registerButtonText}>Go to Dashboard</Text>
         </TouchableOpacity>
       </View>
     </View>

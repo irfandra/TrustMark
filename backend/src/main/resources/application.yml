@@ -1,9 +1,9 @@
 spring:
   application:
-    name: digital-seal-backend
+    name: trustmark-backend
 
   datasource:
-    url: jdbc:mysql://mysql:3306/digital_seal?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    url: jdbc:mysql://mysql:3306/${DB_NAME:trustmark}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:password}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -13,9 +13,8 @@ spring:
       ddl-auto: ${DATABASE_MODE:validate}
     show-sql: true
     properties:
-      hibernate:
-        "format_sql": true
-        dialect: org.hibernate.dialect.MySQL8Dialect
+      "[hibernate.format_sql]": true
+      "[hibernate.dialect]": org.hibernate.dialect.MySQL8Dialect
 
   flyway:
     enabled: true
@@ -37,27 +36,9 @@ spring:
 
 # App Configuration
 app:
-  verification:
-    code-expiry-minutes: 10
-    max-attempts: 5
   mail:
-    from: ${MAIL_FROM:noreply@digitalseal.com}
-    from-name: Digital Seal
-
-# JWT Configuration
-jwt:
-  secret: ${JWT_SECRET:your-256-bit-secret-key-change-this-in-production-12345678901234567890}
-  expiration: 86400000 # 24 hours in milliseconds
-  refresh-expiration: 2592000000 # 30 days in milliseconds
-
-# Web3 Configuration
-web3:
-  rpc:
-    url: ${WEB3_RPC_URL:https://polygon-amoy.infura.io/v3/YOUR_INFURA_KEY}
-  contract:
-    address: ${CONTRACT_ADDRESS:}
-  private:
-    key: ${PRIVATE_KEY:}
+    from: ${MAIL_FROM:noreply@trustmark.app}
+    from-name: TrustMark
 
 # CORS Configuration
 cors:
@@ -95,14 +76,14 @@ management:
 
 logging:
   file:
-    name: logs/digital-seal.log
+    name: logs/trustmark.log
   pattern:
     # Console: timestamp level [THREAD] --- message
     console: "%d{yyyy-MM-dd HH:mm:ss} %-5level --- %msg%n"
     # File: same pattern — grep by [CATEGORY] or level
     file: "%d{yyyy-MM-dd HH:mm:ss} %-5level --- %msg%n"
   level:
-    "com.digitalseal": INFO
-    "org.springframework.security": WARN
-    "org.hibernate.SQL": WARN
-    "org.flywaydb": INFO
+    "[com.digitalseal]": INFO
+    "[org.springframework.security]": WARN
+    "[org.hibernate.SQL]": WARN
+    "[org.flywaydb]": INFO

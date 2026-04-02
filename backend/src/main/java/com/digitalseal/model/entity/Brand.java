@@ -45,9 +45,6 @@ public class Brand {
     @Column(name = "company_banner", length = 500)
     private String companyBanner;
 
-    @Column(name = "statement_letter_url", length = 500)
-    private String statementLetterUrl;
-
     @Column(name = "person_in_charge_name")
     private String personInChargeName;
 

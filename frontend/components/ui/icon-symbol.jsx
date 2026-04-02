@@ -7,7 +7,10 @@ const IconSymbolIOS = Platform.OS === 'ios' ? require('./icon-symbol.ios').IconS
 // Mapping SF Symbols to MaterialIcons names
 const MAPPING = {
   'house.fill': 'home',
-  'paperplane.fill': 'send', 
+  'paperplane.fill': 'send',
+  'cube.box.fill': 'inventory-2',
+  'qrcode.viewfinder': 'qr-code-scanner',
+  'user.circle.fill': 'account-circle',
   'qr-code-scanner.fill': 'qr-code-scanner',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
@@ -34,7 +37,7 @@ export function IconSymbol({ name, size = 24, color, style, weight }) {
   return (
     <View style={[{ width: size, height: size }, style]}>
       <MaterialIcons
-        name={MAPPING[name]}
+        name={MAPPING[name] || 'help-outline'}
         size={size}
         color={color}
       />

@@ -34,12 +34,12 @@ public class PlatformLog {
     @Column(name = "level", nullable = false, length = 10)
     private LogLevel level;
 
-    /** Logical area: AUTH, ORDER, CLAIM, BLOCKCHAIN, … */
+    /** Logical area: AUTH, ORDER, CLAIM, PRODUCT, … */
     @Enumerated(EnumType.STRING)
     @Column(name = "category", nullable = false, length = 20)
     private LogCategory category;
 
-    /** Short machine-readable action name, e.g. USER_LOGIN, NFT_TRANSFER_FAILED */
+    /** Short machine-readable action name, e.g. USER_LOGIN, ORDER_COMPLETED */
     @Column(name = "action", nullable = false, length = 100)
     private String action;
 

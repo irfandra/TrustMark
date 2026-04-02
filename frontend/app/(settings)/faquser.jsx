@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -13,6 +12,7 @@ import {
   Platform,
   UIManager,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -20,29 +20,29 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 const FAQS = [
   {
-    question: 'What is Zeal Marketplace?',
+    question: 'What is TrustMark?',
     answer:
-      'Zeal Marketplace is a physical product NFT marketplace where each purchase can be linked to a unique NFT that represents the item, proof of purchase, or ownership record.',
+      'TrustMark is a creator-focused platform for managing product collections, QR-based authenticity records, and fulfillment workflows.',
   },
   {
-    question: 'What do I receive after purchase?',
+    question: 'What do creators manage in TrustMark?',
     answer:
-      'You receive the physical product and, when applicable, the NFT associated with that product. The NFT can serve as proof of ownership, authenticity, or a digital collectible depending on the item.',
+      'Creators can manage brands, collections, items, generated QR payloads, and order lifecycle steps from request to completion.',
   },
   {
-    question: 'Do I need a crypto wallet?',
+    question: 'Do I need any additional app integrations?',
     answer:
-      'Yes, a wallet is needed to receive and manage NFTs. You can still browse products, but wallet connection may be required to complete NFT-related purchases and transfers.',
+      'No. TrustMark is account-based and works directly in-app for creator features.',
   },
   {
     question: 'How does shipping work?',
     answer:
-      'After checkout, the shipping address you provide is shared only with the brand or fulfillment partner responsible for preparing and delivering the physical product.',
+      'Shipping details are entered and managed in the order workflow. Tracking and recipient data stay available for creator fulfillment operations.',
   },
   {
-    question: 'Can I transfer or resell my NFT?',
+    question: 'How is authenticity represented?',
     answer:
-      'In many cases, yes. If the NFT is designed for transferability, you may be able to move it to another wallet or sell it, subject to the marketplace rules for that product.',
+      'TrustMark uses item-level QR payloads and lifecycle records to represent authenticity and status changes for physical products.',
   },
   {
     question: 'What if I enter the wrong shipping address?',
@@ -52,12 +52,12 @@ const FAQS = [
   {
     question: 'Are refunds available?',
     answer:
-      'Refund eligibility depends on the product, brand policy, and whether the order has already been processed, shipped, or redeemed. Some NFT-linked products may have special restrictions.',
+      'Refund eligibility depends on product policy and current order status, such as pending, processing, shipped, or completed.',
   },
   {
     question: 'How do I contact support?',
     answer:
-      'You can contact support through the app. Include your order details, wallet address, and a clear description of the issue so the team can assist you faster.',
+      'You can contact support through the app. Include your order details and a clear issue description so the team can assist quickly.',
   },
 ];
 
@@ -92,8 +92,8 @@ export default function FAQPage() {
 
         <View style={styles.header}>
           <Text style={styles.title}>FAQ</Text>
-          <Text style={styles.subtitle}>Zeal Marketplace</Text>
-          <Text style={styles.date}>Help for physical products and NFT orders</Text>
+          <Text style={styles.subtitle}>TrustMark Platform</Text>
+          <Text style={styles.date}>Help for creator operations and product workflows</Text>
         </View>
 
         {FAQS.map((item, index) => {

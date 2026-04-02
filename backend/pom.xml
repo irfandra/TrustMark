@@ -15,12 +15,11 @@
     <groupId>com.digitalseal</groupId>
     <artifactId>backend</artifactId>
     <version>1.0.0</version>
-    <name>Digital Seal Backend</name>
-    <description>Backend API for Digital Seal - Luxury Product Authentication</description>
+    <name>TrustMark Backend</name>
+    <description>Backend API for TrustMark creator platform</description>
     
     <properties>
         <java.version>21</java.version>
-        <web3j.version>4.10.0</web3j.version>
         <lombok.version>1.18.34</lombok.version>
     </properties>
     
@@ -80,34 +79,6 @@
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-mysql</artifactId>
-        </dependency>
-        
-        <!-- Web3j for blockchain integration -->
-        <dependency>
-            <groupId>org.web3j</groupId>
-            <artifactId>core</artifactId>
-            <version>${web3j.version}</version>
-        </dependency>
-        
-        <!-- JWT -->
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-api</artifactId>
-            <version>0.11.5</version>
-        </dependency>
-        
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-impl</artifactId>
-            <version>0.11.5</version>
-            <scope>runtime</scope>
-        </dependency>
-        
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-jackson</artifactId>
-            <version>0.11.5</version>
-            <scope>runtime</scope>
         </dependency>
         
         <!-- SpringDoc OpenAPI (Swagger) -->

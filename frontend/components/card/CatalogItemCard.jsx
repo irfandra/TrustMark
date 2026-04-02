@@ -8,6 +8,7 @@ import {
   View,
   StyleSheet,
 } from "react-native";
+import { Fonts } from "../../constants/theme";
 
 export default function CatalogItemCard({ item, cardWidth, onPress }) {
   return (
@@ -42,7 +43,7 @@ export default function CatalogItemCard({ item, cardWidth, onPress }) {
             <View style={styles.polDot} />
             <View>
               <Text style={styles.price}>{item.price}</Text>
-              <Text style={styles.usd}>{item.usd}</Text>
+              {!!item.usd && <Text style={styles.usd}>{item.usd}</Text>}
             </View>
           </View>
         </View>
@@ -53,24 +54,24 @@ export default function CatalogItemCard({ item, cardWidth, onPress }) {
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 14,
+    borderRadius: 20,
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowColor: "#12253A",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 9,
   },
   defaultWidth: { width: '47%' },
   cardImage: {
     height: 220,
     justifyContent: "flex-end",
   },
-  cardImageStyle: { borderRadius: 14 },
+  cardImageStyle: { borderRadius: 20 },
   cardOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.38)",
-    borderRadius: 14,
+    backgroundColor: "rgba(18,37,58,0.5)",
+    borderRadius: 20,
   },
   cardBottom: { padding: 10, gap: 2 },
   brandRow: {
@@ -79,14 +80,14 @@ const styles = StyleSheet.create({
   },
   brandLogo: {
     width: 20, height: 20,
-    borderRadius: 10, backgroundColor: "#f96a1b",
+    borderRadius: 10, backgroundColor: "#FFF9F0",
   },
-  brandName:  { color: "#fff", fontSize: 11, fontWeight: "700" },
-  itemName:   { color: "#fff", fontSize: 15, fontWeight: "900" },
-  itemSub:    { color: "rgba(255,255,255,0.7)", fontSize: 10, fontWeight: "500" },
-  itemAvail:  { color: "rgba(255,255,255,0.6)", fontSize: 10, fontStyle: "italic", marginBottom: 4 },
+  brandName:  { color: "#FFF9F0", fontSize: 11, fontWeight: "700" },
+  itemName:   { color: "#FFF9F0", fontSize: 16, fontWeight: "700", fontFamily: Fonts.serif },
+  itemSub:    { color: "rgba(255,249,240,0.8)", fontSize: 10, fontWeight: "500" },
+  itemAvail:  { color: "rgba(255,249,240,0.72)", fontSize: 10, fontStyle: "italic", marginBottom: 4 },
   priceRow:   { flexDirection: "row", alignItems: "center", gap: 8 },
-  polDot:     { width: 14, height: 14, borderRadius: 7, backgroundColor: "#7B3FE4" },
+  polDot:     { width: 14, height: 14, borderRadius: 7, backgroundColor: "#D95F47" },
   price:      { color: "#fff", fontSize: 12, fontWeight: "800" },
-  usd:        { color: "rgba(255,255,255,0.6)", fontSize: 11, fontStyle: "italic", marginTop: 1 },
+  usd:        { color: "rgba(255,249,240,0.72)", fontSize: 11, fontStyle: "italic", marginTop: 1 },
 });

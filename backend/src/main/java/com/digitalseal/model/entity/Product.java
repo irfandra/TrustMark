@@ -53,10 +53,10 @@ public class Product {
     // Pricing
     @Column(name = "price", precision = 18, scale = 8)
     private BigDecimal price;
-    
-    // Blockchain fields
-    @Column(name = "contract_address", length = 42)
-    private String contractAddress;
+
+    @Column(name = "currency", nullable = false, length = 3)
+    @Builder.Default
+    private String currency = "USD";
     
     @Column(name = "metadata_base_uri", length = 500)
     private String metadataBaseUri;
@@ -76,7 +76,7 @@ public class Product {
     @Column(name = "preminted_at")
     private LocalDateTime premintedAt;
     
-    // Product items (individual NFT units)
+    // Product items (individual authenticated units)
     @Builder.Default
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductItem> items = new ArrayList<>();

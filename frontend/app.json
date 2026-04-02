@@ -1,16 +1,16 @@
 {
   "expo": {
-    "name": "zeal",
-    "slug": "zeal",
+    "name": "trustmark",
+    "slug": "trustmark",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "zeal",
+    "scheme": "trustmark",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.zeal"
+      "bundleIdentifier": "com.anonymous.trustmark"
     },
     "android": {
       "adaptiveIcon": {
@@ -21,7 +21,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.zeal"
+      "package": "com.anonymous.trustmark"
     },
     "web": {
       "output": "static",

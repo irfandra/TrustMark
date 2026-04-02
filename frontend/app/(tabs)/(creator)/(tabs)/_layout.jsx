@@ -1,19 +1,43 @@
 import { Tabs } from 'expo-router';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { HapticTab } from '@/components/shared/haptic-tab';
 
 export default function TabsLayout() {
   const colorScheme = useColorScheme();
+  const palette = Colors[colorScheme ?? 'light'];
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        tabBarInactiveTintColor: Colors[colorScheme ?? 'light'].tabIconDefault,
+        tabBarActiveTintColor: palette.tint,
+        tabBarInactiveTintColor: palette.tabIconDefault,
         headerShown: false,
         tabBarButton: HapticTab,
+        tabBarStyle: {
+          position: 'absolute',
+          left: 14,
+          right: 14,
+          bottom: 12,
+          borderRadius: 22,
+          backgroundColor: '#FFF9F0',
+          borderTopColor: 'transparent',
+          borderTopWidth: 0,
+          height: 70,
+          paddingTop: 8,
+          paddingBottom: 8,
+          shadowColor: '#12253A',
+          shadowOffset: { width: 0, height: 10 },
+          shadowOpacity: 0.14,
+          shadowRadius: 18,
+          elevation: 12,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '700',
+          letterSpacing: 0.2,
+        },
       }}
     >
       <Tabs.Screen
@@ -21,7 +45,7 @@ export default function TabsLayout() {
         options={{
           title: 'Collection',
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="house.fill" color={color} />
+            <Ionicons size={24} name="home" color={color} />
           ),
         }}
       />
@@ -30,7 +54,7 @@ export default function TabsLayout() {
         options={{
           title: 'Order',
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="cube.box.fill" color={color} />
+            <Ionicons size={24} name="cube" color={color} />
           ),
         }}
       />
@@ -39,7 +63,7 @@ export default function TabsLayout() {
         options={{
           title: 'Scan',
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="qrcode.viewfinder" color={color} />
+            <Ionicons size={24} name="qr-code-outline" color={color} />
           ),
         }}
       />
@@ -48,7 +72,7 @@ export default function TabsLayout() {
         options={{
           title: 'Creator',
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="user.circle.fill" color={color} />
+            <Ionicons size={24} name="person-circle" color={color} />
           ),
         }}
       />

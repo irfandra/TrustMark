@@ -50,11 +50,6 @@ public class User {
     private String phoneNumber;
     
     @Enumerated(EnumType.STRING)
-    @Column(name = "auth_type", nullable = false)
-    @Builder.Default
-    private AuthType authType = AuthType.EMAIL;
-    
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
     private UserRole role = UserRole.OWNER;
@@ -67,25 +62,6 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Brand> brands = new ArrayList<>();
     
-    @Column(name = "email_verified", nullable = false)
-    @Builder.Default
-    private Boolean emailVerified = false;
-    
-    @Column(name = "wallet_verified", nullable = false)
-    @Builder.Default
-    private Boolean walletVerified = false;
-    
-    @Column(name = "is_locked", nullable = false)
-    @Builder.Default
-    private Boolean isLocked = false;
-    
-    @Column(name = "failed_login_attempts", nullable = false)
-    @Builder.Default
-    private Integer failedLoginAttempts = 0;
-    
-    @Column(name = "last_failed_login_at")
-    private LocalDateTime lastFailedLoginAt;
-    
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -93,9 +69,6 @@ public class User {
     @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-    
-    @Column(name = "last_login_at")
-    private LocalDateTime lastLoginAt;
     
     @PrePersist
     protected void onCreate() {
@@ -110,19 +83,5 @@ public class User {
     
     private String generateNonce() {
         return "nonce_" + System.currentTimeMillis() + "_" + Math.random();
-    }
-    
-    public void incrementFailedAttempts() {
-        this.failedLoginAttempts++;
-        this.lastFailedLoginAt = LocalDateTime.now();
-        if (this.failedLoginAttempts >= 5) {
-            this.isLocked = true;
-        }
-    }
-    
-    public void resetFailedAttempts() {
-        this.failedLoginAttempts = 0;
-        this.lastFailedLoginAt = null;
-        this.isLocked = false;
     }
 }

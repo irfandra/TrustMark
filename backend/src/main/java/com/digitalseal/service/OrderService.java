@@ -1,7 +1,6 @@
 package com.digitalseal.service;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
@@ -9,13 +8,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.digitalseal.dto.request.ConfirmPaymentRequest;
-import com.digitalseal.dto.request.CreateOrderRequest;
 import com.digitalseal.dto.request.UpdateShippingRequest;
 import com.digitalseal.dto.response.OrderResponse;
 import com.digitalseal.exception.InvalidStateException;
 import com.digitalseal.exception.ResourceNotFoundException;
-import com.digitalseal.exception.UnauthorizedException;
 import com.digitalseal.model.entity.LogCategory;
 import com.digitalseal.model.entity.Order;
 import com.digitalseal.model.entity.OrderStatus;
@@ -30,7 +26,8 @@ import com.digitalseal.repository.OrderRepository;
 import com.digitalseal.repository.OwnershipHistoryRepository;
 import com.digitalseal.repository.ProductItemRepository;
 import com.digitalseal.repository.ProductRepository;
-import com.digitalseal.repository.UserRepository;
+import java.math.BigDecimal;
+import java.util.List;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,102 +41,8 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
     private final ProductItemRepository productItemRepository;
-    private final UserRepository userRepository;
     private final OwnershipHistoryRepository ownershipHistoryRepository;
-    private final BlockchainService blockchainService;
     private final PlatformLogService platformLogService;
-    
-    /**
-     * Create a purchase order for a listed product. Reserves the next available item.
-     */
-    @Transactional
-    public OrderResponse createOrder(Long buyerId, String productId, CreateOrderRequest request) {
-        User buyer = userRepository.findById(buyerId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        
-        Product product = productRepository.findByProductCode(productId)
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
-        
-        if (product.getStatus() != ProductStatus.LISTED) {
-            throw new InvalidStateException("Product is not available for purchase. Status: " + product.getStatus());
-        }
-        
-        long availableQuantity = productItemRepository.countByProductIdAndSealStatus(product.getId(), SealStatus.PRE_MINTED);
-        if (availableQuantity <= 0) {
-            throw new InvalidStateException("Product is sold out");
-        }
-        
-        // Reserve the next available product item
-        ProductItem item = productItemRepository.findFirstAvailableItem(product.getId())
-                .orElseThrow(() -> new InvalidStateException("No available items for this product"));
-        
-        item.setSealStatus(SealStatus.RESERVED);
-        productItemRepository.save(item);
-        
-        long availableAfterReservation = productItemRepository.countByProductIdAndSealStatus(product.getId(), SealStatus.PRE_MINTED);
-        if (availableAfterReservation == 0) {
-            product.setStatus(ProductStatus.SOLD_OUT);
-        } else if (product.getStatus() == ProductStatus.SOLD_OUT) {
-            product.setStatus(ProductStatus.LISTED);
-        }
-        productRepository.save(product);
-        
-        // Create the order
-        String orderNumber = generateOrderNumber();
-        Order order = Order.builder()
-                .orderNumber(orderNumber)
-                .product(product)
-                .productItem(item)
-                .buyer(buyer)
-                .buyerWallet(request.getBuyerWallet())
-                .quantity(1)
-                .unitPrice(product.getPrice())
-                .totalPrice(product.getPrice())
-                .shippingAddress(request.getShippingAddress())
-                .status(OrderStatus.PENDING)
-                .build();
-        
-        Order saved = orderRepository.save(order);
-        log.info("Order {} created for product '{}' (item: {}) by user ID: {}",
-                orderNumber, product.getProductName(), item.getItemSerial(), buyerId);
-
-        platformLogService.info(LogCategory.ORDER, "ORDER_CREATED",
-                buyerId, buyer.getEmail(),
-                "ORDER", saved.getId().toString(),
-                "Order: " + orderNumber
-                + " | Product: " + product.getProductName()
-                + " | Item: " + item.getItemSerial()
-                + " | Price: " + order.getTotalPrice());
-
-        return mapToResponse(saved);
-    }
-    
-    /**
-     * Confirm payment for an order (buyer submits tx hash)
-     */
-    @Transactional
-    public OrderResponse confirmPayment(Long buyerId, Long orderId, ConfirmPaymentRequest request) {
-        Order order = orderRepository.findByIdAndBuyerId(orderId, buyerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
-        
-        if (order.getStatus() != OrderStatus.PENDING) {
-            throw new InvalidStateException("Payment can only be confirmed for PENDING orders. Status: " + order.getStatus());
-        }
-        
-        order.setPaymentTxHash(request.getPaymentTxHash());
-        order.setPaymentConfirmedAt(LocalDateTime.now());
-        order.setStatus(OrderStatus.PAYMENT_RECEIVED);
-        
-        Order saved = orderRepository.save(order);
-        log.info("Payment confirmed for order {} (tx: {})", order.getOrderNumber(), request.getPaymentTxHash());
-
-        platformLogService.info(LogCategory.ORDER, "PAYMENT_CONFIRMED",
-                buyerId, order.getBuyer().getEmail(),
-                "ORDER", saved.getId().toString(),
-                "Order: " + order.getOrderNumber() + " | TxHash: " + request.getPaymentTxHash());
-
-        return mapToResponse(saved);
-    }
     
     /**
      * Brand processes the order.
@@ -212,27 +115,72 @@ public class OrderService {
 
         return mapToResponse(saved);
     }
-    
-    /**
-     * Confirm delivery (buyer or system)
-     */
-    @Transactional
-    public OrderResponse confirmDelivery(Long buyerId, Long orderId) {
-        Order order = orderRepository.findByIdAndBuyerId(orderId, buyerId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
-        
-        if (order.getStatus() != OrderStatus.SHIPPED) {
-            throw new InvalidStateException("Only SHIPPED orders can be confirmed as delivered. Status: " + order.getStatus());
+
+        /**
+         * Ship an in-stock PRE_MINTED item directly from creator fulfillment.
+         * Creates a shipment order in SHIPPED state for operational tracking.
+         */
+        @Transactional
+        public OrderResponse shipInStockItem(Long userId, Long productItemId, UpdateShippingRequest request) {
+        ProductItem item = productItemRepository.findById(productItemId)
+            .orElseThrow(() -> new ResourceNotFoundException("Product item not found"));
+
+        Product product = item.getProduct();
+        verifyBrandOwnerForProductItem(userId, item);
+
+        if (item.getSealStatus() != SealStatus.PRE_MINTED) {
+            throw new InvalidStateException(
+                "Only PRE_MINTED in-stock items can be shipped. Status: " + item.getSealStatus());
         }
-        
-        order.setDeliveredAt(LocalDateTime.now());
-        order.setStatus(OrderStatus.DELIVERED);
-        
+
+        List<OrderStatus> activeStatuses = List.of(
+            OrderStatus.PENDING,
+            OrderStatus.PAYMENT_RECEIVED,
+            OrderStatus.PROCESSING,
+            OrderStatus.SHIPPED,
+            OrderStatus.DELIVERED);
+
+        if (orderRepository.existsByProductItemIdAndStatusIn(item.getId(), activeStatuses)) {
+            throw new InvalidStateException("This product item already has an active shipment order.");
+        }
+
+        User shipmentOwner = product.getBrand().getUser();
+        BigDecimal unitPrice = product.getPrice() != null ? product.getPrice() : BigDecimal.ZERO;
+
+        Order order = Order.builder()
+            .orderNumber(generateOrderNumber())
+            .product(product)
+            .productItem(item)
+            .buyer(shipmentOwner)
+            .buyerWallet(product.getBrand().getCompanyWalletAddress())
+            .quantity(1)
+            .unitPrice(unitPrice)
+            .totalPrice(unitPrice)
+            .currency("USD")
+            .paymentTxHash("CREATOR_SHIPMENT_" + UUID.randomUUID().toString().replace("-", ""))
+            .paymentConfirmedAt(LocalDateTime.now())
+            .trackingNumber(request.getTrackingNumber())
+            .shippedAt(LocalDateTime.now())
+            .status(OrderStatus.SHIPPED)
+            .build();
+
+        item.setSealStatus(SealStatus.RESERVED);
+        productItemRepository.save(item);
+
         Order saved = orderRepository.save(order);
-        log.info("Order {} delivery confirmed by buyer", order.getOrderNumber());
-        
+        log.info("In-stock item {} shipped directly with tracking {}", item.getItemSerial(), request.getTrackingNumber());
+
+        platformLogService.info(
+            LogCategory.ORDER,
+            "ORDER_SHIPPED_DIRECT_IN_STOCK",
+            userId,
+            product.getBrand().getUser().getEmail(),
+            "ORDER",
+            saved.getId().toString(),
+            "Order: " + saved.getOrderNumber() + " | Item: " + item.getItemSerial());
+
         return mapToResponse(saved);
-    }
+        }
     
     /**
      * Complete the order manually — fallback for when the buyer does not scan the QR code.
@@ -274,28 +222,6 @@ public class OrderService {
         order.setCompletedAt(LocalDateTime.now());
         order.setStatus(OrderStatus.COMPLETED);
         
-        // Trigger blockchain transfer (NFT from brand → buyer)
-        if (item != null && item.getTokenId() != null && blockchainService.isAvailable()) {
-            try {
-                String txHash = blockchainService.transferToken(
-                        item.getTokenId(), order.getBuyerWallet(), "PURCHASE");
-                if (txHash != null) {
-                    order.setSealTransferTxHash(txHash);
-                    item.setTransferTxHash(txHash);
-                    productItemRepository.save(item);
-                    log.info("Blockchain seal transfer successful. TxHash: {}", txHash);
-                }
-            } catch (Exception e) {
-                log.error("Blockchain transfer failed for order {}: {}", order.getOrderNumber(), e.getMessage());
-                platformLogService.error(LogCategory.BLOCKCHAIN, "NFT_TRANSFER_FAILED",
-                        userId, order.getProduct().getBrand().getUser().getEmail(),
-                        "ORDER", order.getId().toString(),
-                        "Order: " + order.getOrderNumber(),
-                        e.getClass().getSimpleName() + ": " + e.getMessage());
-                // Don't fail the order completion — ownership transferred off-chain
-            }
-        }
-
         Order saved = orderRepository.save(order);
         log.info("Order {} completed. Seal transferred to buyer wallet: {}",
                 order.getOrderNumber(), order.getBuyerWallet());
@@ -304,64 +230,11 @@ public class OrderService {
                 userId, order.getProduct().getBrand().getUser().getEmail(),
                 "ORDER", saved.getId().toString(),
                 "Order: " + order.getOrderNumber()
-                + " | Buyer wallet: " + order.getBuyerWallet()
-                + (order.getSealTransferTxHash() != null ? " | TxHash: " + order.getSealTransferTxHash() : ""));
+                + " | Buyer wallet: " + order.getBuyerWallet());
         
         // Check if all items are sold → update product status
         checkProductCompletion(order.getProduct());
         
-        return mapToResponse(saved);
-    }
-    
-    /**
-     * Cancel an order (buyer can cancel PENDING orders, brand can cancel PENDING/PAYMENT_RECEIVED)
-     */
-    @Transactional
-    public OrderResponse cancelOrder(Long userId, Long orderId, String reason) {
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
-        
-        boolean isBuyer = order.getBuyer().getId().equals(userId);
-        boolean isBrandOwner = order.getProduct().getBrand().getUser().getId().equals(userId);
-        
-        if (!isBuyer && !isBrandOwner) {
-            throw new UnauthorizedException("You are not authorized to cancel this order");
-        }
-        
-        if (isBuyer && order.getStatus() != OrderStatus.PENDING) {
-            throw new InvalidStateException("Buyers can only cancel PENDING orders. Status: " + order.getStatus());
-        }
-        
-        if (!isBuyer && order.getStatus() != OrderStatus.PENDING && order.getStatus() != OrderStatus.PAYMENT_RECEIVED) {
-            throw new InvalidStateException("Brands can only cancel PENDING or PAYMENT_RECEIVED orders. Status: " + order.getStatus());
-        }
-        
-        // Release the reserved item back
-        ProductItem item = order.getProductItem();
-        if (item != null && item.getSealStatus() == SealStatus.RESERVED) {
-            item.setSealStatus(SealStatus.PRE_MINTED);
-            productItemRepository.save(item);
-
-            // Availability is derived from PRE_MINTED item count
-            Product product = order.getProduct();
-            if (product.getStatus() == ProductStatus.SOLD_OUT) {
-                product.setStatus(ProductStatus.LISTED);
-            }
-            productRepository.save(product);
-        }
-        
-        order.setCancelledAt(LocalDateTime.now());
-        order.setCancellationReason(reason);
-        order.setStatus(OrderStatus.CANCELLED);
-        
-        Order saved = orderRepository.save(order);
-        log.info("Order {} cancelled by user ID: {}. Reason: {}", order.getOrderNumber(), userId, reason);
-
-        platformLogService.warn(LogCategory.ORDER, "ORDER_CANCELLED",
-                userId, order.getBuyer().getEmail(),
-                "ORDER", saved.getId().toString(),
-                "Order: " + order.getOrderNumber() + " | Reason: " + reason);
-
         return mapToResponse(saved);
     }
     
@@ -371,44 +244,37 @@ public class OrderService {
     public OrderResponse getOrder(Long userId, Long orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
-        
-        boolean isBuyer = order.getBuyer().getId().equals(userId);
-        boolean isBrandOwner = order.getProduct().getBrand().getUser().getId().equals(userId);
-        
-        if (!isBuyer && !isBrandOwner) {
-            throw new UnauthorizedException("You are not authorized to view this order");
-        }
-        
+
         return mapToResponse(order);
-    }
-    
-    /**
-     * Get all orders for a buyer (paginated)
-     */
-    public Page<OrderResponse> getMyOrders(Long buyerId, Pageable pageable) {
-        return orderRepository.findByBuyerId(buyerId, pageable)
-                .map(this::mapToResponse);
     }
     
     /**
      * Get all orders for a product (brand owner only, paginated)
      */
     public Page<OrderResponse> getOrdersByProduct(Long userId, String productId, Pageable pageable) {
-        Product product = productRepository.findByProductCode(productId)
+        productRepository.findByProductCode(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
-        
-        if (!product.getBrand().getUser().getId().equals(userId)) {
-            throw new UnauthorizedException("You don't own this product's brand");
-        }
-        
+
         return orderRepository.findByProductProductCode(productId, pageable)
                 .map(this::mapToResponse);
     }
     
     private void verifyBrandOwnerForOrder(Long userId, Order order) {
-        if (!order.getProduct().getBrand().getUser().getId().equals(userId)) {
-            throw new UnauthorizedException("You don't own this product's brand");
-        }
+        // Ownership check intentionally bypassed for no-auth CRUD mode.
+    }
+
+    private void verifyBrandOwnerForProductItem(Long userId, ProductItem item) {
+        // Ownership check intentionally bypassed for no-auth CRUD mode.
+    }
+
+    private String generateOrderNumber() {
+        String candidate;
+        do {
+            String token = UUID.randomUUID().toString().replace("-", "").substring(0, 10).toUpperCase();
+            candidate = "ORD-SHP-" + token;
+        } while (Boolean.TRUE.equals(orderRepository.existsByOrderNumber(candidate)));
+
+        return candidate;
     }
     
     private void checkProductCompletion(Product product) {
@@ -420,12 +286,6 @@ public class OrderService {
             log.info("Product '{}' (ID: {}) is now COMPLETED — all items sold and delivered", 
                     product.getProductName(), product.getId());
         }
-    }
-    
-    private String generateOrderNumber() {
-        String dateStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String random = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
-        return "ORD-" + dateStr + "-" + random;
     }
 
     private String buildUserDisplayName(User user) {
@@ -465,11 +325,11 @@ public class OrderService {
                 .quantity(order.getQuantity())
                 .unitPrice(order.getUnitPrice())
                 .totalPrice(order.getTotalPrice())
+                .currency(order.getCurrency() != null ? order.getCurrency() : "USD")
                 .paymentTxHash(order.getPaymentTxHash())
                 .status(order.getStatus())
                 .shippingAddress(order.getShippingAddress())
                 .trackingNumber(order.getTrackingNumber())
-                .sealTransferTxHash(order.getSealTransferTxHash())
                 .createdAt(order.getCreatedAt())
                 .paymentConfirmedAt(order.getPaymentConfirmedAt())
                 .shippedAt(order.getShippedAt())

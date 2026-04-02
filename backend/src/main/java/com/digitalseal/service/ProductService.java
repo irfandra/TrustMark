@@ -1,6 +1,5 @@
 package com.digitalseal.service;
 
-import java.math.BigInteger;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -16,7 +15,6 @@ import com.digitalseal.dto.request.UpdateProductRequest;
 import com.digitalseal.dto.response.ProductResponse;
 import com.digitalseal.exception.InvalidStateException;
 import com.digitalseal.exception.ResourceNotFoundException;
-import com.digitalseal.exception.UnauthorizedException;
 import com.digitalseal.model.entity.Brand;
 import com.digitalseal.model.entity.Collection;
 import com.digitalseal.model.entity.Product;
@@ -28,7 +26,6 @@ import com.digitalseal.repository.BrandRepository;
 import com.digitalseal.repository.CollectionRepository;
 import com.digitalseal.repository.ProductItemRepository;
 import com.digitalseal.repository.ProductRepository;
-import com.digitalseal.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,8 +43,6 @@ public class ProductService {
     private final BrandRepository brandRepository;
     private final CollectionRepository collectionRepository;
     private final ProductItemRepository productItemRepository;
-    private final UserRepository userRepository;
-    private final BlockchainService blockchainService;
     
     /**
      * Register a new product under a brand (status = DRAFT)
@@ -71,6 +66,7 @@ public class ProductService {
                 .category(request.getCategory())
                 .imageUrl(request.getImageUrl())
                 .price(request.getPrice())
+                .currency("USD")
                 .status(ProductStatus.DRAFT)
                 .build();
         
@@ -193,6 +189,10 @@ public class ProductService {
         if (product.getStatus() != ProductStatus.DRAFT) {
             throw new InvalidStateException("Only DRAFT products can be published. Current status: " + product.getStatus());
         }
+
+        if (product.getCurrency() == null || product.getCurrency().isBlank()) {
+            product.setCurrency("USD");
+        }
         
         product.setPrice(request.getPrice());
         if (request.getListingDeadline() != null) {
@@ -208,7 +208,7 @@ public class ProductService {
     
     /**
      * Pre-mint product: PUBLISHED → PREMINTED. Generates product items with claim codes.
-     * In production, this would trigger blockchain minting. For now, it creates the items off-chain.
+        * Creates product items off-chain for creator fulfillment.
      */
     @Transactional
     public ProductResponse premintProduct(Long userId, Long brandId, String productId, PremintProductRequest request) {
@@ -231,7 +231,7 @@ public class ProductService {
 
         int mintQuantity = request.getQuantity();
         
-        // Generate product items (individual NFT units)
+        // Generate product items (individual authenticated units)
         for (int i = 1; i <= mintQuantity; i++) {
             String itemSerial = product.getProductCode() + "-" + String.format("%04d", i);
             String claimCode = generateClaimCode();
@@ -241,8 +241,6 @@ public class ProductService {
                 .itemSerial(itemSerial)
                     .itemIndex(i)
                 .claimCode(claimCode)
-                .nftQrCode(buildNftQrCode(itemSerial))
-                .productLabelQrCode(buildProductLabelQrCode(itemSerial, claimCode))
                 .certificateQrCode(buildCertificateQrCode(itemSerial))
                     .sealStatus(SealStatus.PRE_MINTED)
                     .build();
@@ -252,51 +250,9 @@ public class ProductService {
         product.setPremintedAt(LocalDateTime.now());
         product.setStatus(ProductStatus.PREMINTED);
         
-        // Save product + items first (off-chain)
+        // Save product + items off-chain only (creator-first mode)
         Product saved = productRepository.save(product);
-        
-        // Trigger blockchain batch-minting (after items are persisted)
-        if (blockchainService.isAvailable()) {
-            try {
-                String brandWallet = saved.getBrand().getCompanyWalletAddress();
-                if (brandWallet == null || brandWallet.isBlank()) {
-                    log.warn("Brand has no wallet address. Skipping on-chain minting.");
-                } else {
-                    List<String> serials = saved.getItems().stream()
-                            .map(ProductItem::getItemSerial).collect(Collectors.toList());
-                    List<String> metadataURIs = serials.stream()
-                            .map(s -> "https://digitalseal.io/metadata/" + s).collect(Collectors.toList());
-                    
-                    // Convert price to wei (assuming price is in MATIC, 1 MATIC = 10^18 wei)
-                    BigInteger priceWei = saved.getPrice().multiply(new java.math.BigDecimal("1000000000000000000")).toBigInteger();
-                    
-                    BlockchainService.BatchMintResult result = blockchainService.batchPreMint(
-                            brandWallet, serials, metadataURIs, priceWei);
-                    
-                    if (result != null) {
-                        saved.setContractAddress(System.getenv("CONTRACT_ADDRESS"));
-                        
-                        // Assign tokenIds and txHash to each item
-                        BigInteger startTokenId = result.startTokenId();
-                        for (int idx = 0; idx < saved.getItems().size(); idx++) {
-                            ProductItem item = saved.getItems().get(idx);
-                            if (startTokenId != null) {
-                                item.setTokenId(startTokenId.longValue() + idx);
-                            }
-                            item.setMintTxHash(result.txHash());
-                            item.setMintedAt(LocalDateTime.now());
-                        }
-                        saved = productRepository.save(saved);
-                        log.info("Blockchain batch mint successful. TxHash: {}", result.txHash());
-                    }
-                }
-            } catch (Exception e) {
-                log.error("Blockchain minting failed but items created off-chain: {}", e.getMessage());
-                // Don't fail the whole operation — items are created off-chain
-            }
-        } else {
-            log.info("Blockchain not available. Items created off-chain only.");
-        }
+        log.info("Product items created off-chain only for creator workflow.");
         
         log.info("Product '{}' (Code: {}) pre-minted with {} items by user ID: {}",
             saved.getProductName(), productId, mintQuantity, userId);
@@ -389,16 +345,9 @@ public class ProductService {
      * Verify the user owns the brand
      */
     public Brand verifyBrandOwnership(Long userId, Long brandId) {
-        userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        
         Brand brand = brandRepository.findById(brandId)
                 .orElseThrow(() -> new ResourceNotFoundException("Brand not found"));
-        
-        if (!brand.getUser().getId().equals(userId)) {
-            throw new UnauthorizedException("You don't own this brand");
-        }
-        
+
         return brand;
     }
     
@@ -417,9 +366,9 @@ public class ProductService {
                 .category(product.getCategory())
                 .imageUrl(product.getImageUrl())
                 .price(product.getPrice())
+                .currency(product.getCurrency() != null ? product.getCurrency() : "USD")
             .totalQuantity((int) totalQuantity)
             .availableQuantity((int) availableQuantity)
-                .contractAddress(product.getContractAddress())
                 .metadataBaseUri(product.getMetadataBaseUri())
                 .status(product.getStatus())
                 .listedAt(product.getListedAt())
@@ -434,19 +383,8 @@ public class ProductService {
         return java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 16);
     }
 
-    private String buildNftQrCode(String itemSerial) {
-        return "digitalseal://nft/" + itemSerial;
-    }
-
-    private String buildProductLabelQrCode(String itemSerial, String claimCode) {
-        if (claimCode != null && !claimCode.isBlank()) {
-            return claimCode;
-        }
-        return "digitalseal://label/" + itemSerial;
-    }
-
     private String buildCertificateQrCode(String itemSerial) {
-        return "digitalseal://certificate/" + itemSerial;
+        return "trustmark://certificate/" + itemSerial;
     }
 
     private String generateProductCode() {

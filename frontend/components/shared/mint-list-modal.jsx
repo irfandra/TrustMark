@@ -38,15 +38,15 @@ export default function MintListModal({ visible = true, onClose, onConfirm }) {
 
           {/* Body text 1 */}
           <Text style={styles.bodyText}>
-            Once the collection is listed, all items will be minted, collections cannot be
-            modified, and QR code for label, certificate, and NFT will be generated..
+            Once the collection is active, all items will be minted, collections cannot be
+            modified, and QR code for ownership, label, and certificate will be generated.
           </Text>
 
           {/* Body text 2 */}
           <Text style={[styles.bodyText, { marginTop: 12, textAlign: 'justify' }]}> 
             Define a sales time frame for the collection. When the time frame ends, the
-            collection will no longer be available for sale, and any unsold NFTs will be
-            automatically burned.
+            collection will no longer be available for sale, and any unsold items will be
+            marked as unassigned for future release.
           </Text>
 
           {/* Time Frame */}

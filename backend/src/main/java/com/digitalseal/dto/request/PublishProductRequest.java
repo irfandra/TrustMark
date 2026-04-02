@@ -11,7 +11,7 @@ import lombok.Data;
 public class PublishProductRequest {
     
     @NotNull(message = "Price is required to publish")
-    @Schema(description = "Price per unit", example = "0.5")
+    @Schema(description = "Price per unit in USD", example = "199.99")
     private BigDecimal price;
     
     @Schema(description = "Optional listing deadline", example = "2026-06-01T00:00:00")

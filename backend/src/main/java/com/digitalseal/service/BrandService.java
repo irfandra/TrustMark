@@ -51,7 +51,6 @@ public class BrandService {
                 .companyWalletAddress(request.getCompanyWalletAddress())
                 .logo(request.getLogo())
             .companyBanner(request.getCompanyBanner())
-            .statementLetterUrl(request.getStatementLetterUrl())
             .personInChargeName(request.getPersonInChargeName())
             .personInChargeRole(request.getPersonInChargeRole())
             .personInChargeEmail(request.getPersonInChargeEmail())
@@ -77,8 +76,7 @@ public class BrandService {
      * Get all brands owned by the authenticated user
      */
     public List<BrandResponse> getMyBrands(Long userId) {
-        User user = findUserById(userId);
-        return brandRepository.findByUser(user).stream()
+        return brandRepository.findAll().stream()
                 .map(this::mapToBrandResponse)
                 .collect(Collectors.toList());
     }
@@ -97,10 +95,8 @@ public class BrandService {
      */
     @Transactional
     public BrandResponse updateBrand(Long userId, Long brandId, UpdateBrandRequest request) {
-        User user = findUserById(userId);
-        
-        Brand brand = brandRepository.findByIdAndUser(brandId, user)
-                .orElseThrow(() -> new RuntimeException("Brand not found or you don't own this brand"));
+        Brand brand = brandRepository.findById(brandId)
+            .orElseThrow(() -> new RuntimeException("Brand not found"));
         
         if (request.getBrandName() != null) {
             // Check uniqueness only if name is changing
@@ -135,10 +131,6 @@ public class BrandService {
             brand.setCompanyBanner(request.getCompanyBanner());
         }
 
-        if (request.getStatementLetterUrl() != null) {
-            brand.setStatementLetterUrl(request.getStatementLetterUrl());
-        }
-
         if (request.getPersonInChargeName() != null) {
             brand.setPersonInChargeName(request.getPersonInChargeName());
         }
@@ -170,25 +162,23 @@ public class BrandService {
      */
     @Transactional
     public void deleteBrand(Long userId, Long brandId) {
-        User user = findUserById(userId);
-        
-        Brand brand = brandRepository.findByIdAndUser(brandId, user)
-                .orElseThrow(() -> new RuntimeException("Brand not found or you don't own this brand"));
+        Brand brand = brandRepository.findById(brandId)
+                .orElseThrow(() -> new RuntimeException("Brand not found"));
         
         brandRepository.delete(brand);
         log.info("Brand '{}' deleted by user ID: {}", brand.getBrandName(), userId);
-        
-        // If user has no more brands, revert role to OWNER
-        List<Brand> remainingBrands = brandRepository.findByUser(user);
-        if (remainingBrands.isEmpty()) {
-            user.setRole(UserRole.OWNER);
-            userRepository.save(user);
-            log.info("User ID: {} role reverted to OWNER (no brands remaining)", userId);
-        }
     }
     
     private User findUserById(Long userId) {
-        return userRepository.findById(userId)
+        if (userId != null) {
+            User direct = userRepository.findById(userId).orElse(null);
+            if (direct != null) {
+                return direct;
+            }
+        }
+
+        return userRepository.findAll().stream()
+                .findFirst()
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
     
@@ -210,7 +200,6 @@ public class BrandService {
                 .companyWalletAddress(brand.getCompanyWalletAddress())
                 .logo(brand.getLogo())
                 .companyBanner(brand.getCompanyBanner())
-                .statementLetterUrl(brand.getStatementLetterUrl())
                 .personInChargeName(brand.getPersonInChargeName())
                 .personInChargeRole(brand.getPersonInChargeRole())
                 .personInChargeEmail(brand.getPersonInChargeEmail())

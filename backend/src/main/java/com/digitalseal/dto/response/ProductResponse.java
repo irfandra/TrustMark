@@ -45,8 +45,11 @@ public class ProductResponse {
     private String imageUrl;
     
     // Pricing
-    @Schema(description = "Price per unit", example = "0.5")
+    @Schema(description = "Price per unit in USD", example = "199.99")
     private BigDecimal price;
+
+    @Schema(description = "ISO 4217 currency code", example = "USD")
+    private String currency;
     
     // Quantity
     @Schema(description = "Total quantity to produce", example = "100")
@@ -54,10 +57,6 @@ public class ProductResponse {
     
     @Schema(description = "Available quantity for purchase", example = "85")
     private Integer availableQuantity;
-    
-    // Blockchain
-    @Schema(description = "Smart contract address", example = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb")
-    private String contractAddress;
     
     @Schema(description = "IPFS/metadata base URI", example = "ipfs://QmXyz...")
     private String metadataBaseUri;
@@ -73,7 +72,7 @@ public class ProductResponse {
     @Schema(description = "Listing deadline")
     private LocalDateTime listingDeadline;
     
-    @Schema(description = "When digital seals were pre-minted")
+    @Schema(description = "When authentication items were generated")
     private LocalDateTime premintedAt;
     
     @Schema(description = "Creation timestamp")

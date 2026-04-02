@@ -4,7 +4,6 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,7 +29,6 @@ import com.digitalseal.service.ProductService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 // unused imports removed
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -51,13 +49,11 @@ public class ProductController {
     // ========================
     
     @Operation(summary = "Register a new product", description = "Creates a new product under a brand with DRAFT status.")
-    @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/brands/{brandId}/products")
     public ResponseEntity<ApiResponse<ProductResponse>> createProduct(
-            Authentication authentication,
             @PathVariable Long brandId,
             @Valid @RequestBody CreateProductRequest request) {
-        Long userId = Long.parseLong(authentication.getName());
+        Long userId = null;
         ProductResponse response = productService.createProduct(userId, brandId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(response, "Product created successfully"));
@@ -74,26 +70,22 @@ public class ProductController {
     }
     
     @Operation(summary = "Update a product", description = "DRAFT: all fields editable. PUBLISHED: only price and quantity.")
-    @SecurityRequirement(name = "bearerAuth")
     @PutMapping("/brands/{brandId}/products/{productId}")
     public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(
-            Authentication authentication,
             @PathVariable Long brandId,
             @PathVariable String productId,
             @Valid @RequestBody UpdateProductRequest request) {
-        Long userId = Long.parseLong(authentication.getName());
+        Long userId = null;
         ProductResponse response = productService.updateProduct(userId, brandId, productId, request);
         return ResponseEntity.ok(ApiResponse.success(response, "Product updated successfully"));
     }
     
     @Operation(summary = "Delete a product", description = "Only DRAFT products can be deleted.")
-    @SecurityRequirement(name = "bearerAuth")
     @DeleteMapping("/brands/{brandId}/products/{productId}")
     public ResponseEntity<ApiResponse<Void>> deleteProduct(
-            Authentication authentication,
             @PathVariable Long brandId,
             @PathVariable String productId) {
-        Long userId = Long.parseLong(authentication.getName());
+        Long userId = null;
         productService.deleteProduct(userId, brandId, productId);
         return ResponseEntity.ok(ApiResponse.success(null, "Product deleted successfully"));
     }
@@ -103,63 +95,53 @@ public class ProductController {
     // ========================
     
     @Operation(summary = "Publish a product", description = "DRAFT → PUBLISHED. Locks core details, sets price and quantity.")
-    @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/brands/{brandId}/products/{productId}/publish")
     public ResponseEntity<ApiResponse<ProductResponse>> publishProduct(
-            Authentication authentication,
             @PathVariable Long brandId,
             @PathVariable String productId,
             @Valid @RequestBody PublishProductRequest request) {
-        Long userId = Long.parseLong(authentication.getName());
+        Long userId = null;
         ProductResponse response = productService.publishProduct(userId, brandId, productId, request);
         return ResponseEntity.ok(ApiResponse.success(response, "Product published successfully"));
     }
     
-    @Operation(summary = "Pre-mint digital seals", description = "PUBLISHED → PREMINTED. Generates product items with claim codes.")
-    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Generate authentication items", description = "PUBLISHED → PREMINTED. Generates product items with claim codes.")
     @PostMapping("/brands/{brandId}/products/{productId}/premint")
     public ResponseEntity<ApiResponse<ProductResponse>> premintProduct(
-            Authentication authentication,
             @PathVariable Long brandId,
             @PathVariable String productId,
             @Valid @RequestBody PremintProductRequest request) {
-        Long userId = Long.parseLong(authentication.getName());
+        Long userId = null;
         ProductResponse response = productService.premintProduct(userId, brandId, productId, request);
-        return ResponseEntity.ok(ApiResponse.success(response, "Digital seals pre-minted successfully"));
+        return ResponseEntity.ok(ApiResponse.success(response, "Authentication items generated successfully"));
     }
     
     @Operation(summary = "List product on marketplace", description = "PREMINTED → LISTED. Makes product available for purchase.")
-    @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/brands/{brandId}/products/{productId}/list")
     public ResponseEntity<ApiResponse<ProductResponse>> listProduct(
-            Authentication authentication,
             @PathVariable Long brandId,
             @PathVariable String productId) {
-        Long userId = Long.parseLong(authentication.getName());
+        Long userId = null;
         ProductResponse response = productService.listProduct(userId, brandId, productId);
         return ResponseEntity.ok(ApiResponse.success(response, "Product listed on marketplace"));
     }
     
     @Operation(summary = "Delist product from marketplace", description = "LISTED/SOLD_OUT → DELISTED.")
-    @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/brands/{brandId}/products/{productId}/delist")
     public ResponseEntity<ApiResponse<ProductResponse>> delistProduct(
-            Authentication authentication,
             @PathVariable Long brandId,
             @PathVariable String productId) {
-        Long userId = Long.parseLong(authentication.getName());
+        Long userId = null;
         ProductResponse response = productService.delistProduct(userId, brandId, productId);
         return ResponseEntity.ok(ApiResponse.success(response, "Product delisted from marketplace"));
     }
     
     @Operation(summary = "Archive a product", description = "COMPLETED/DELISTED → ARCHIVED.")
-    @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/brands/{brandId}/products/{productId}/archive")
     public ResponseEntity<ApiResponse<ProductResponse>> archiveProduct(
-            Authentication authentication,
             @PathVariable Long brandId,
             @PathVariable String productId) {
-        Long userId = Long.parseLong(authentication.getName());
+        Long userId = null;
         ProductResponse response = productService.archiveProduct(userId, brandId, productId);
         return ResponseEntity.ok(ApiResponse.success(response, "Product archived"));
     }
@@ -168,21 +150,12 @@ public class ProductController {
     // Product Items (Brand-scoped)
     // ========================
     
-    @Operation(summary = "Get all items for a product", description = "Returns individual NFT items for a product. Brand owner only.")
-    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Get all items for a product", description = "Returns individual authenticated items for a product. Brand owner only.")
     @GetMapping("/brands/{brandId}/products/{productId}/items")
     public ResponseEntity<ApiResponse<List<ProductItemResponse>>> getProductItems(
-            Authentication authentication,
             @PathVariable Long brandId,
             @PathVariable String productId) {
-        if (authentication != null) {
-            try {
-                Long userId = Long.parseLong(authentication.getName());
-                productService.verifyBrandOwnership(userId, brandId);
-            } catch (NumberFormatException ignored) {
-                // Allow anonymous access in current dev/public mode.
-            }
-        }
+        productService.verifyBrandOwnership(null, brandId);
         List<ProductItemResponse> items = productItemService.getItemsByProduct(productId);
         return ResponseEntity.ok(ApiResponse.success(items, "Product items retrieved"));
     }

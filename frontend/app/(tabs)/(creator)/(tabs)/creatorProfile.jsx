@@ -1,11 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
   Image,
   ImageBackground,
-  Linking,
   RefreshControl,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,29 +10,13 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { brandService } from '@/services/brandService';
 import LoadingPulse from '@/components/shared/loading-pulse';
 
 const DEFAULT_BANNER =
   'https://images.unsplash.com/photo-1556740749-887f6717d7e4?auto=format&fit=crop&w=1200&q=80';
 const DEFAULT_LOGO = '';
-
-const truncateWallet = (value) => {
-  const wallet = String(value || '').trim();
-  if (!wallet) return '-';
-  if (wallet.length <= 12) return wallet;
-  return `${wallet.slice(0, 6)}...${wallet.slice(-4)}`;
-};
-
-const getFileName = (url) => {
-  if (!url) return 'No request letter uploaded';
-  try {
-    const withoutQuery = url.split('?')[0];
-    return decodeURIComponent(withoutQuery.substring(withoutQuery.lastIndexOf('/') + 1));
-  } catch (_error) {
-    return 'Request Letter.pdf';
-  }
-};
 
 export default function CreatorProfileScreen() {
   const [brand, setBrand] = useState(null);
@@ -70,54 +51,31 @@ export default function CreatorProfileScreen() {
     if (brand) {
       return {
         brandName: brand.brandName || 'Brand',
-        statusText: brand.verified ? 'Your request has been approved' : 'Your Request is being evaluated',
+        statusText: brand.verified ? 'Brand Verified' : 'Your Request is being evaluated',
         statusColor: brand.verified ? '#0F9D58' : '#E10600',
         banner: brand.companyBanner || DEFAULT_BANNER,
         logo: brand.logo || DEFAULT_LOGO,
         companyAddress: brand.companyAddress || '-',
-        wallet: brand.companyWalletAddress || '-',
         personName: brand.personInChargeName || brand.ownerName || '-',
         personEmail: brand.personInChargeEmail || brand.companyEmail || '-',
         personRole: brand.personInChargeRole || '-',
         personPhone: brand.personInChargePhone || '-',
-        requestLetterUrl: brand.statementLetterUrl || '',
       };
     }
 
     return {
-      brandName: 'ZEAL',
+      brandName: 'TRUSTMARK',
       statusText: 'Your Request is being evaluated',
       statusColor: '#E10600',
       banner: DEFAULT_BANNER,
       logo: DEFAULT_LOGO,
       companyAddress: '-',
-      wallet: '-',
       personName: '-',
       personEmail: '-',
       personRole: '-',
       personPhone: '-',
-      requestLetterUrl: '',
     };
   }, [brand]);
-
-  const openRequestLetter = async () => {
-    if (!profile.requestLetterUrl) {
-      Alert.alert('Unavailable', 'No request letter found for this brand.');
-      return;
-    }
-
-    try {
-      const canOpen = await Linking.canOpenURL(profile.requestLetterUrl);
-      if (!canOpen) {
-        Alert.alert('Unavailable', 'Cannot open request letter URL.');
-        return;
-      }
-
-      await Linking.openURL(profile.requestLetterUrl);
-    } catch (_error) {
-      Alert.alert('Unavailable', 'Cannot open request letter URL.');
-    }
-  };
 
   const reloadProfile = async () => {
     loadProfile();
@@ -134,14 +92,14 @@ export default function CreatorProfileScreen() {
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#111" />
+          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#1E2C3A" />
         }
       >
       
         <Text style={styles.pageTitle}>Brand</Text>
 
         <View style={styles.statusRow}>
-          <Ionicons name="information-circle" size={22} color={profile.statusColor} />
+          <Ionicons name="checkmark-circle-outline" size={22} color={profile.statusColor} />
           <Text style={[styles.statusText, { color: profile.statusColor }]}>{profile.statusText}</Text>
         </View>
 
@@ -175,23 +133,6 @@ export default function CreatorProfileScreen() {
         <Text style={styles.sectionTitle}>Company Address</Text>
         <Text style={styles.sectionBody}>{profile.companyAddress}</Text>
 
-        <Text style={styles.sectionTitle}>Company Crypto Wallet</Text>
-        <View style={styles.walletCard}>
-          <View style={styles.walletLeft}>
-            <Image
-              source={{ uri: 'https://seeklogo.com/images/M/metamask-logo-09EDE53DBD-seeklogo.com.png' }}
-              style={styles.walletIcon}
-            />
-            <View>
-              <Text style={styles.walletName}>Metamask</Text>
-              <Text style={styles.walletAddress}>{truncateWallet(profile.wallet)}</Text>
-            </View>
-          </View>
-          <TouchableOpacity style={styles.manageButton}>
-            <Text style={styles.manageText}>Manage</Text>
-          </TouchableOpacity>
-        </View>
-
         <Text style={styles.sectionTitle}>Person In Charge Detail</Text>
         <View style={styles.gridRow}>
           <View style={styles.gridItem}>
@@ -213,17 +154,6 @@ export default function CreatorProfileScreen() {
             <Text style={styles.gridValue}>{profile.personPhone}</Text>
           </View>
         </View>
-
-        <Text style={styles.sectionTitle}>Request Letter</Text>
-        <TouchableOpacity style={styles.fileRow} onPress={openRequestLetter}>
-          <View style={styles.fileIconWrap}>
-            <Ionicons name="document-attach-outline" size={22} color="#8A8A8A" />
-          </View>
-          <Text style={styles.fileName} numberOfLines={1}>
-            {getFileName(profile.requestLetterUrl)}
-          </Text>
-          <Ionicons name="chevron-forward" size={20} color="#A1A1A1" />
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -232,7 +162,7 @@ export default function CreatorProfileScreen() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F6F1E8',
   },
   scrollContainer: {
     paddingHorizontal: 18,
@@ -245,45 +175,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  zeal: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#000',
-    letterSpacing: -0.4,
-  },
   modePill: {
     flexDirection: 'row',
     borderWidth: 1,
-    borderColor: '#BDBDBD',
+    borderColor: '#D6C8B5',
     borderRadius: 24,
     overflow: 'hidden',
-    backgroundColor: '#fff',
+    backgroundColor: '#FFF9F0',
   },
   modeOff: {
     width: 48,
     height: 44,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#FFF9F0',
   },
   modeOn: {
     width: 52,
     height: 44,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000',
+    backgroundColor: '#1E2C3A',
   },
   brandHeading: {
     fontSize: 44,
     fontWeight: '900',
-    color: '#111',
+    color: '#1E2C3A',
     letterSpacing: -1,
     marginBottom: 4,
   },
   pageTitle: {
     fontSize: 44,
     fontWeight: '800',
-    color: '#111',
+    color: '#1E2C3A',
     letterSpacing: -0.8,
     marginBottom: 8,
   },
@@ -310,7 +234,7 @@ const styles = StyleSheet.create({
   },
   bannerOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.28)',
+    backgroundColor: 'rgba(30,44,58,0.42)',
   },
   bannerIdentity: {
     flexDirection: 'row',
@@ -323,7 +247,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFF9F0',
     overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
@@ -335,7 +259,7 @@ const styles = StyleSheet.create({
   },
   brandName: {
     fontSize: 30,
-    color: '#fff',
+    color: '#FFF9F0',
     fontWeight: '800',
     letterSpacing: -0.4,
     flexShrink: 1,
@@ -347,15 +271,15 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   loadingText: {
-    color: '#666',
+    color: '#6E6356',
     fontSize: 13,
   },
   errorWrap: {
     marginBottom: 14,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#F3C2C2',
-    backgroundColor: '#FFF4F4',
+    borderColor: '#E3CEC7',
+    backgroundColor: '#F9F2F0',
     padding: 10,
   },
   errorText: {
@@ -367,11 +291,11 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     paddingHorizontal: 10,
     paddingVertical: 6,
-    backgroundColor: '#111',
+    backgroundColor: '#1E2C3A',
     borderRadius: 8,
   },
   retryText: {
-    color: '#fff',
+    color: '#FFF9F0',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -381,53 +305,14 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '800',
     fontStyle: 'italic',
-    color: '#111',
+    color: '#1E2C3A',
     letterSpacing: -0.2,
   },
   sectionBody: {
-    color: '#222',
+    color: '#6F5E4C',
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 6,
-  },
-  walletCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  walletLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1,
-  },
-  walletIcon: {
-    width: 44,
-    height: 44,
-  },
-  walletName: {
-    fontSize: 16,
-    color: '#111',
-    fontWeight: '700',
-  },
-  walletAddress: {
-    fontSize: 13,
-    color: '#333',
-  },
-  manageButton: {
-    width: 106,
-    height: 46,
-    borderRadius: 12,
-    backgroundColor: '#000',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  manageText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.2,
   },
   gridRow: {
     flexDirection: 'row',
@@ -439,34 +324,13 @@ const styles = StyleSheet.create({
   },
   gridLabel: {
     fontSize: 14,
-    color: '#111',
+    color: '#3D4D61',
     fontWeight: '600',
     marginBottom: 2,
   },
   gridValue: {
-    color: '#8A8A8A',
+    color: '#6F5E4C',
     fontSize: 14,
     lineHeight: 19,
-  },
-  fileRow: {
-    marginTop: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingBottom: 12,
-  },
-  fileIconWrap: {
-    width: 36,
-    height: 46,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#CFCFCF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  fileName: {
-    fontSize: 14,
-    color: '#7A7A7A',
-    flex: 1,
   },
 });

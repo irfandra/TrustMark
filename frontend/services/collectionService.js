@@ -6,12 +6,52 @@ const FALLBACK_COLLECTION_IMAGE =
 const FALLBACK_PRODUCT_IMAGE =
   'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=800&q=60';
 
-const RARITY_TO_TAG_COLORS = {
-  Standard: { tagColor: '#4CAF50', tagTextColor: '#fff' },
-  Common: { tagColor: '#90CAF9', tagTextColor: '#fff' },
-  Rare: { tagColor: '#111', tagTextColor: '#fff' },
-  'Ultra Rare': { tagColor: '#9C27B0', tagTextColor: '#fff' },
-  Limited: { tagColor: '#FFC107', tagTextColor: '#111' },
+const STOCK_STATUS_COLORS = {
+  'In Stock': { tagColor: '#2D7A4E', tagTextColor: '#fff' },
+  'Medium Stock': { tagColor: '#B6842D', tagTextColor: '#fff' },
+  'Low Stock': { tagColor: '#D95F47', tagTextColor: '#fff' },
+  'Out of Stock': { tagColor: '#6B5A4B', tagTextColor: '#fff' },
+  'No Stock': { tagColor: '#9E8F7C', tagTextColor: '#fff' },
+};
+
+const getStockStatusTag = (totalProduced, inStock) => {
+  const safeTotal = Math.max(Number(totalProduced) || 0, 0);
+  const safeInStock = Math.max(Number(inStock) || 0, 0);
+
+  if (safeTotal <= 0) {
+    return {
+      tag: 'No Stock',
+      ...STOCK_STATUS_COLORS['No Stock'],
+    };
+  }
+
+  if (safeInStock <= 0) {
+    return {
+      tag: 'Out of Stock',
+      ...STOCK_STATUS_COLORS['Out of Stock'],
+    };
+  }
+
+  const ratio = safeInStock / safeTotal;
+
+  if (ratio < 0.1) {
+    return {
+      tag: 'Low Stock',
+      ...STOCK_STATUS_COLORS['Low Stock'],
+    };
+  }
+
+  if (ratio < 0.4) {
+    return {
+      tag: 'Medium Stock',
+      ...STOCK_STATUS_COLORS['Medium Stock'],
+    };
+  }
+
+  return {
+    tag: 'In Stock',
+    ...STOCK_STATUS_COLORS['In Stock'],
+  };
 };
 
 const mapCategoryToProductCategory = (category) => {
@@ -44,90 +84,48 @@ const parseNumericInput = (value) => {
 const formatStatus = (status) => {
   if (!status) return 'Draft';
   const normalized = String(status).toLowerCase();
-  if (normalized === 'listed') return 'Listed';
-  if (normalized === 'expired') return 'Expired';
+  if (normalized === 'active' || normalized === 'listed') return 'Active';
+  if (normalized === 'inactive' || normalized === 'expired') return 'Inactive';
   return 'Draft';
 };
 
-const formatTagDefaults = (tag, status) => {
-  if (tag) {
-    return {
-      tag,
-      tagColor: '#111',
-      tagTextColor: '#fff',
-    };
+const mapUiStatusToApiStatus = (status) => {
+  const normalized = String(status || '').trim().toLowerCase();
+
+  if (normalized === 'active' || normalized === 'listed') {
+    return 'ACTIVE';
   }
 
-  if (status === 'Listed') {
-    return {
-      tag: 'Limited',
-      tagColor: '#ffb300',
-      tagTextColor: '#111',
-    };
+  if (normalized === 'inactive' || normalized === 'expired') {
+    return 'INACTIVE';
   }
 
-  if (status === 'Expired') {
-    return {
-      tag: 'Common',
-      tagColor: '#333',
-      tagTextColor: '#fff',
-    };
-  }
-
-  return {
-    tag: 'Rare',
-    tagColor: '#111',
-    tagTextColor: '#fff',
-  };
-};
-
-const mapSalesEnd = (salesEndAt) => {
-  if (!salesEndAt) {
-    return {};
-  }
-
-  const nowMs = Date.now();
-  const endMs = new Date(salesEndAt).getTime();
-  if (!Number.isFinite(endMs)) {
-    return {};
-  }
-
-  const diffSeconds = Math.max(0, Math.floor((endMs - nowMs) / 1000));
-  if (diffSeconds === 0) {
-    return {};
-  }
-
-  if (diffSeconds >= 86400) {
-    return { saleEndsInDays: Math.ceil(diffSeconds / 86400) };
-  }
-
-  return { saleEndsInSeconds: diffSeconds };
+  return 'DRAFT';
 };
 
 const mapCollectionToUI = (collection) => {
   const status = formatStatus(collection.status);
-  const { tag, tagColor, tagTextColor } = formatTagDefaults(collection.tag, status);
-
   const itemsCount = Number(collection.itemsCount ?? collection.productCount ?? 0);
-  const soldCount = 0;
+  const soldCount = Math.max(Number(collection.soldCount ?? 0), 0);
+  const inStockCount = Math.max(itemsCount - soldCount, 0);
+  const stockTag = getStockStatusTag(itemsCount, inStockCount);
 
   return {
     id: String(collection.id),
     status,
     brand: collection.brandName || 'Unknown Brand',
     brandLogo: collection.brandLogo || undefined,
-    tag,
+    tag: stockTag.tag,
     title: collection.collectionName || 'Untitled Collection',
     subtitle: collection.season || 'Collection',
     itemsCount,
     soldCount,
-    floorPrice: 'POL --',
+    floorPrice: 'USD --',
     floorUsd: '',
     image: collection.imageUrl || FALLBACK_COLLECTION_IMAGE,
     items: `👜 ${itemsCount.toLocaleString()} Items`,
-    tagColor: collection.tagColor || tagColor,
-    tagTextColor: collection.tagTextColor || tagTextColor,
-    ...mapSalesEnd(collection.salesEndAt),
+    tagColor: stockTag.tagColor,
+    tagTextColor: stockTag.tagTextColor,
   };
 };
 
@@ -159,7 +157,7 @@ const parseProductPrice = (product) => {
 
 const getCollectionFloorPrice = (products) => {
   if (!Array.isArray(products) || products.length === 0) {
-    return 'POL --';
+    return 'USD --';
   }
 
   const minPrice = products.reduce((currentMin, product) => {
@@ -171,10 +169,10 @@ const getCollectionFloorPrice = (products) => {
   }, Number.POSITIVE_INFINITY);
 
   if (!Number.isFinite(minPrice)) {
-    return 'POL --';
+    return 'USD --';
   }
 
-  return `POL ${formatPriceAmount(minPrice)}`;
+  return `USD ${formatPriceAmount(minPrice)}`;
 };
 
 const extractPageContent = (value) => {
@@ -273,86 +271,89 @@ const mapCollectionOwners = (groupedItems) => {
     });
 };
 
-const buildOrderActivityRows = (order) => {
-  const rows = [];
-  const buyerWallet = shortenWallet(order?.buyerWallet);
-  const itemLabel = order?.itemSerial
-    ? `#${order.itemSerial}`
-    : order?.orderNumber || `#${order?.id || 'N/A'}`;
-  const price = formatPriceAmount(order?.totalPrice);
+const normalizeSerial = (value) => String(value || '').trim().toUpperCase();
 
-  const pushRow = (event, timestamp, from, to) => {
-    if (!timestamp) {
-      return;
+const formatOrderStatusLabel = (status) => {
+  const normalized = String(status || '').trim().toUpperCase();
+
+  switch (normalized) {
+    case 'PENDING':
+      return 'Pending';
+    case 'PAYMENT_RECEIVED':
+      return 'Payment Received';
+    case 'PROCESSING':
+      return 'Processing';
+    case 'SHIPPED':
+      return 'On Shipment';
+    case 'DELIVERED':
+      return 'Delivered';
+    case 'COMPLETED':
+      return 'Completed';
+    case 'CANCELLED':
+      return 'Cancelled';
+    case 'REFUNDED':
+      return 'Refunded';
+    default:
+      return normalized ? normalized.replace(/_/g, ' ') : 'Unknown';
+  }
+};
+
+const formatSealStatusLabel = (status) => {
+  const normalized = String(status || '').trim().toUpperCase();
+
+  switch (normalized) {
+    case 'PRE_MINTED':
+      return 'In Stock';
+    case 'RESERVED':
+      return 'Reserved';
+    case 'REALIZED':
+      return 'Completed';
+    case 'BURNED':
+      return 'Removed';
+    case 'REVOKED':
+      return 'Revoked';
+    default:
+      return normalized ? normalized.replace(/_/g, ' ') : 'Unknown';
+  }
+};
+
+const buildOrderStatusIndex = (orders) => {
+  const byItemId = new Map();
+  const bySerial = new Map();
+
+  (Array.isArray(orders) ? orders : []).forEach((order) => {
+    const statusLabel = formatOrderStatusLabel(order?.status);
+
+    if (order?.productItemId != null) {
+      byItemId.set(String(order.productItemId), statusLabel);
     }
 
-    rows.push({
-      id: `${order?.id || 'order'}-${event}-${timestamp}`,
-      event,
-      item: itemLabel,
-      price,
-      from,
-      to,
-      timestamp,
-    });
-  };
+    const serial = normalizeSerial(order?.itemSerial);
+    if (serial) {
+      bySerial.set(serial, statusLabel);
+    }
+  });
 
-  pushRow('Order Placed', order?.createdAt, buyerWallet, 'Brand');
-  pushRow('Payment Confirmed', order?.paymentConfirmedAt, buyerWallet, 'Brand');
-  pushRow('Shipped', order?.shippedAt, 'Brand', buyerWallet);
-  pushRow('Delivered', order?.deliveredAt, 'Brand', buyerWallet);
-  pushRow('Completed', order?.completedAt, 'Brand Vault', buyerWallet);
-  pushRow('Cancelled', order?.cancelledAt, 'Brand', buyerWallet);
-
-  if (rows.length === 0) {
-    rows.push({
-      id: `${order?.id || 'order'}-status`,
-      event: String(order?.status || 'Order').replace(/_/g, ' '),
-      item: itemLabel,
-      price,
-      from: 'Brand',
-      to: buyerWallet,
-      timestamp: order?.createdAt || null,
-    });
-  }
-
-  return rows;
+  return { byItemId, bySerial };
 };
 
-const mapOrdersToActivity = (orders) => {
-  const safeOrders = Array.isArray(orders) ? orders : [];
-  return safeOrders
-    .flatMap(buildOrderActivityRows)
-    .sort((a, b) => {
-      const left = new Date(b.timestamp || 0).getTime();
-      const right = new Date(a.timestamp || 0).getTime();
-      return left - right;
-    });
-};
+const mapProductItemsToStatusRows = (items, orders = []) => {
+  const { byItemId, bySerial } = buildOrderStatusIndex(orders);
 
-const getScarcityLabel = (itemIndex, total) => {
-  const safeIndex = Number(itemIndex || 0);
-  const safeTotal = Number(total || 0);
+  return (Array.isArray(items) ? items : []).map((item) => {
+    const serial = String(item?.itemSerial || item?.id || '').trim();
+    const normalizedSerial = normalizeSerial(serial);
+    const status =
+      byItemId.get(String(item?.id ?? '')) ||
+      (normalizedSerial ? bySerial.get(normalizedSerial) : null) ||
+      formatSealStatusLabel(item?.sealStatus);
 
-  if (!Number.isFinite(safeIndex) || safeIndex <= 0 || !Number.isFinite(safeTotal) || safeTotal <= 0) {
-    return 'Standard';
-  }
-
-  if (safeIndex === 1) return 'Genesis';
-
-  const ratio = safeIndex / safeTotal;
-  if (ratio <= 0.05) return 'Ultra Rare';
-  if (ratio <= 0.15) return 'Rare';
-  if (ratio <= 0.35) return 'Scarce';
-  return 'Standard';
-};
-
-const getScarcityMultiplier = (label) => {
-  if (label === 'Genesis') return 1.2;
-  if (label === 'Ultra Rare') return 1.1;
-  if (label === 'Rare') return 1.05;
-  if (label === 'Scarce') return 1.02;
-  return 1;
+    return {
+      itemId: serial ? `#${serial}` : `#${item?.id ?? 'N/A'}`,
+      productName: item?.productName || '',
+      status,
+    };
+  });
 };
 
 const mapProductItemsToPurchaseRows = (items, fallbackProduct) => {
@@ -365,10 +366,8 @@ const mapProductItemsToPurchaseRows = (items, fallbackProduct) => {
 
   return items.map((item) => {
     const itemIndex = Number(item.itemIndex || 0);
-    const scarcity = getScarcityLabel(itemIndex, total);
-    const multiplier = getScarcityMultiplier(scarcity);
     const adjustedPrice = Number.isFinite(basePrice)
-      ? formatPriceAmount(basePrice * multiplier)
+      ? formatPriceAmount(basePrice)
       : fallbackProduct.priceAmount;
     const serial = String(item.itemSerial || item.id || '');
 
@@ -377,8 +376,6 @@ const mapProductItemsToPurchaseRows = (items, fallbackProduct) => {
       itemSerial: serial,
       edition: `${itemIndex.toLocaleString()} of ${total.toLocaleString()}`,
       price: adjustedPrice,
-      nftQrCode: String(item.nftQrCode || '').trim(),
-      productLabelQrCode: String(item.productLabelQrCode || '').trim(),
       certificateQrCode: String(item.certificateQrCode || '').trim(),
       sealStatus: item.sealStatus || '',
       mintedAt: item.mintedAt || null,
@@ -400,6 +397,7 @@ const mapProductToCatalogItem = (product) => {
     total: Number.isFinite(total) ? total : 0,
     priceAmount: formatPriceAmount(product.price),
     priceUsd: '',
+    currency: product.currency || 'USD',
     image: product.imageUrl || FALLBACK_PRODUCT_IMAGE,
     description: product.description || '',
     category: product.category || 'OTHER',
@@ -423,7 +421,7 @@ const mapProductToDetail = (product, productItems = [], orders = []) => {
       },
     ],
     purchaseItems: mapProductItemsToPurchaseRows(productItems, catalogItem),
-    activity: mapOrdersToActivity(orders),
+    activity: mapProductItemsToStatusRows(productItems, orders),
   };
 };
 
@@ -438,15 +436,43 @@ export const collectionService = {
 
     return Promise.all(
       mappedCollections.map(async (collection) => {
-        const hasItems = Number(collection.itemsCount || 0) > 0;
-        if (!hasItems) {
-          return collection;
-        }
-
         const products = await apiRequest(`/collections/${collection.id}/products`).catch(() => []);
+
+        const stockSummary = (Array.isArray(products) ? products : []).reduce(
+          (summary, product) => {
+            const total = Number(product?.totalQuantity ?? product?.total ?? 0);
+            const available = Number(product?.availableQuantity ?? product?.available ?? 0);
+
+            if (Number.isFinite(total) && total > 0) {
+              summary.total += total;
+            }
+
+            if (Number.isFinite(available) && available >= 0) {
+              summary.inStock += available;
+            }
+
+            return summary;
+          },
+          { total: 0, inStock: 0 }
+        );
+
+        const totalProduced = stockSummary.total > 0
+          ? stockSummary.total
+          : Number(collection.itemsCount || 0);
+        const normalizedInStock = Math.max(
+          Math.min(stockSummary.inStock, totalProduced),
+          0
+        );
+        const soldCount = Math.max(totalProduced - normalizedInStock, 0);
+        const stockTag = getStockStatusTag(totalProduced, normalizedInStock);
 
         return {
           ...collection,
+          itemsCount: totalProduced,
+          soldCount,
+          tag: stockTag.tag,
+          tagColor: stockTag.tagColor,
+          tagTextColor: stockTag.tagTextColor,
           floorPrice: getCollectionFloorPrice(products),
         };
       })
@@ -464,7 +490,6 @@ export const collectionService = {
       brandName: brand.brandName,
       logo: brand.logo,
       banner: brand.companyBanner,
-      statementLetterUrl: brand.statementLetterUrl,
     };
   },
 
@@ -492,18 +517,14 @@ export const collectionService = {
     // then fallback to public endpoint for compatibility.
     let items = [];
     if (data?.brandId != null) {
-      items = await apiRequest(`/brands/${data.brandId}/products/${productId}/items`, {
-        authRequired: true,
-      }).catch(() => []);
+      items = await apiRequest(`/brands/${data.brandId}/products/${productId}/items`).catch(() => []);
     }
 
     if (!Array.isArray(items) || items.length === 0) {
       items = await apiRequest(`/products/${productId}/items`).catch(() => []);
     }
 
-    const orderPage = await apiRequest(`/orders/product/${productId}?page=0&size=100`, {
-      authRequired: true,
-    }).catch(() => null);
+    const orderPage = await apiRequest(`/orders/product/${productId}?page=0&size=100`).catch(() => null);
 
     const orders = extractPageContent(orderPage);
 
@@ -520,16 +541,24 @@ export const collectionService = {
       return [];
     }
 
-    const orderPages = await Promise.all(
-      products.map((product) =>
-        apiRequest(`/orders/product/${product.id}?page=0&size=100`, {
-          authRequired: true,
-        }).catch(() => null)
-      )
+    const statusRows = await Promise.all(
+      products.map(async (product) => {
+        const productId = product?.id;
+        if (!productId) {
+          return [];
+        }
+
+        const [items, orderPage] = await Promise.all([
+          apiRequest(`/products/${productId}/items`).catch(() => []),
+          apiRequest(`/orders/product/${productId}?page=0&size=100`).catch(() => null),
+        ]);
+
+        const orders = extractPageContent(orderPage);
+        return mapProductItemsToStatusRows(items, orders);
+      })
     );
 
-    const orders = orderPages.flatMap((page) => extractPageContent(page));
-    return mapOrdersToActivity(orders);
+    return statusRows.flat();
   },
 
   async getCollectionOwners(collectionId) {
@@ -566,7 +595,6 @@ export const collectionService = {
       about,
       imageUrl,
       totalItems,
-      rarity,
       variations,
     },
     brandId = DEFAULT_BRAND_ID
@@ -596,29 +624,31 @@ export const collectionService = {
     }
 
     const totalItemsNumber = parseNumericInput(totalItems);
+    const variationTotal = safeVariations.reduce((sum, variation) => sum + variation.quantity, 0);
+
     if (Number.isFinite(totalItemsNumber) && totalItemsNumber > 0) {
-      const variationTotal = safeVariations.reduce((sum, variation) => sum + variation.quantity, 0);
       if (variationTotal !== totalItemsNumber) {
         throw new Error(`Total variation quantity must equal ${totalItemsNumber}`);
       }
     }
 
-    const rarityKey = RARITY_TO_TAG_COLORS[rarity] ? rarity : 'Rare';
-    const tagColors = RARITY_TO_TAG_COLORS[rarityKey];
+    const producedCount = Number.isFinite(totalItemsNumber) && totalItemsNumber > 0
+      ? totalItemsNumber
+      : variationTotal;
+    const stockTag = getStockStatusTag(producedCount, producedCount);
 
     const createdCollection = await apiRequest(`/brands/${brandId}/collections`, {
       method: 'POST',
-      authRequired: true,
       body: {
         collectionName: safeCollectionName,
         description: String(about || '').trim() || null,
         imageUrl: String(imageUrl || '').trim() || null,
         season: String(category || '').trim() || null,
-        isLimitedEdition: rarityKey === 'Limited',
+        isLimitedEdition: false,
         status: 'DRAFT',
-        tag: rarityKey,
-        tagColor: tagColors.tagColor,
-        tagTextColor: tagColors.tagTextColor,
+        tag: stockTag.tag,
+        tagColor: stockTag.tagColor,
+        tagTextColor: stockTag.tagTextColor,
       },
     });
 
@@ -628,7 +658,6 @@ export const collectionService = {
       safeVariations.map((variation) =>
         apiRequest(`/brands/${brandId}/products`, {
           method: 'POST',
-          authRequired: true,
           body: {
             productName: variation.name,
             description: variation.description || String(about || '').trim() || null,
@@ -642,5 +671,66 @@ export const collectionService = {
     );
 
     return createdCollection;
+  },
+
+  async updateCollection(
+    collectionId,
+    {
+      collectionName,
+      description,
+      imageUrl,
+      season,
+      isLimitedEdition,
+      status,
+      tag,
+      tagColor,
+      tagTextColor,
+    },
+    brandId = DEFAULT_BRAND_ID
+  ) {
+    if (!collectionId) {
+      throw new Error('Collection id is required');
+    }
+
+    const safeCollectionName = String(collectionName || '').trim();
+    if (safeCollectionName.length < 2) {
+      throw new Error('Collection name must be at least 2 characters');
+    }
+
+    const body = {
+      collectionName: safeCollectionName,
+      description: String(description || '').trim() || null,
+      imageUrl: String(imageUrl || '').trim() || null,
+      season: String(season || '').trim() || null,
+      isLimitedEdition: Boolean(isLimitedEdition),
+      status: mapUiStatusToApiStatus(status),
+    };
+
+    if (tag !== undefined) {
+      body.tag = String(tag || '').trim() || null;
+    }
+
+    if (tagColor !== undefined) {
+      body.tagColor = String(tagColor || '').trim() || null;
+    }
+
+    if (tagTextColor !== undefined) {
+      body.tagTextColor = String(tagTextColor || '').trim() || null;
+    }
+
+    return apiRequest(`/brands/${brandId}/collections/${collectionId}`, {
+      method: 'PUT',
+      body,
+    });
+  },
+
+  async deleteCollection(collectionId, brandId = DEFAULT_BRAND_ID) {
+    if (!collectionId) {
+      throw new Error('Collection id is required');
+    }
+
+    return apiRequest(`/brands/${brandId}/collections/${collectionId}`, {
+      method: 'DELETE',
+    });
   },
 };

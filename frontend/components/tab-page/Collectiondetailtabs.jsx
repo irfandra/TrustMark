@@ -81,7 +81,7 @@ export function CatalogTab({ items }) {
           <Ionicons
             name="options-outline"
             size={16}
-            color={totalActiveFilters > 0 ? '#fff' : '#111'}
+            color={totalActiveFilters > 0 ? '#fff' : '#1E2C3A'}
           />
           <Text style={[styles.filterText, totalActiveFilters > 0 && styles.filterTextActive]}>
             Filter{totalActiveFilters > 0 ? ` (${totalActiveFilters})` : ''}
@@ -91,17 +91,17 @@ export function CatalogTab({ items }) {
 
       {/* Search */}
       <View style={styles.searchBar}>
-        <Ionicons name="search" size={16} color="#aaa" />
+        <Ionicons name="search" size={16} color="#8A7C6A" />
         <TextInput
           value={search}
           onChangeText={setSearch}
           placeholder="Search Catalog"
-          placeholderTextColor="#aaa"
+          placeholderTextColor="#8A7C6A"
           style={styles.searchInput}
         />
         {search.length > 0 && (
           <TouchableOpacity onPress={() => setSearch('')}>
-            <Ionicons name="close-circle" size={18} color="#aaa" />
+            <Ionicons name="close-circle" size={18} color="#8A7C6A" />
           </TouchableOpacity>
         )}
       </View>
@@ -210,27 +210,27 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 4,
   },
-  tabSectionTitle: { fontSize: 26, fontWeight: "900", color: "#111" },
-  tabSectionCount: { fontSize: 13, fontWeight: "600", color: "#aaa" },
+  tabSectionTitle: { fontSize: 26, fontWeight: "900", color: "#1E2C3A" },
+  tabSectionCount: { fontSize: 13, fontWeight: "600", color: "#8A7C6A" },
 
   filterBtn: {
     flexDirection: "row", alignItems: "center", gap: 6,
     paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: 10, borderWidth: 1.5,
-    borderColor: "#ddd", backgroundColor: "#fff",
+    borderRadius: 999, borderWidth: 1,
+    borderColor: "#D6C8B5", backgroundColor: "#FFF9F0",
   },
-  filterBtnActive:  { backgroundColor: "#111", borderColor: "#111" },
-  filterText:       { fontSize: 13, fontWeight: "600", color: "#111" },
+  filterBtnActive:  { backgroundColor: "#D95F47", borderColor: "#D95F47" },
+  filterText:       { fontSize: 13, fontWeight: "600", color: "#1E2C3A" },
   filterTextActive: { color: "#fff" },
 
   searchBar: {
     flexDirection: "row", alignItems: "center",
-    backgroundColor: "#fff", borderRadius: 12,
+    backgroundColor: "#FFF9F0", borderRadius: 14,
     marginHorizontal: 16, marginVertical: 10,
     paddingHorizontal: 14, height: 46,
-    borderWidth: 1, borderColor: "#e8e8e8", gap: 8,
+    borderWidth: 1, borderColor: "#E4D9C9", gap: 8,
   },
-  searchInput: { flex: 1, fontSize: 14, color: "#111" },
+  searchInput: { flex: 1, fontSize: 14, color: "#1E2C3A" },
 
   // Pills
   pillsScroll:     { marginHorizontal: 16, marginBottom: 10 },
@@ -238,8 +238,8 @@ const styles = StyleSheet.create({
 
   filterPill: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#111', paddingHorizontal: 12,
-    paddingVertical: 8, borderRadius: 20,
+    backgroundColor: '#1E2C3A', paddingHorizontal: 12,
+    paddingVertical: 8, borderRadius: 999,
   },
   filterPillLabel: {
     color: 'rgba(255,255,255,0.55)',
@@ -251,11 +251,11 @@ const styles = StyleSheet.create({
   },
   clearPill: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: '#FEF2F2', paddingHorizontal: 12,
-    paddingVertical: 8, borderRadius: 20,
-    borderWidth: 1, borderColor: '#FECACA',
+    backgroundColor: '#FFF2EC', paddingHorizontal: 12,
+    paddingVertical: 8, borderRadius: 999,
+    borderWidth: 1, borderColor: '#F4C0B4',
   },
-  clearPillText: { color: '#E74C3C', fontSize: 12, fontWeight: '600' },
+  clearPillText: { color: '#D95F47', fontSize: 12, fontWeight: '600' },
 
   catalogGrid: {
     flexDirection: "row", flexWrap: "wrap",
@@ -266,8 +266,8 @@ const styles = StyleSheet.create({
     width: '100%', paddingVertical: 40,
     alignItems: 'center', gap: 8,
   },
-  emptyText:   { fontSize: 14, color: '#aaa', fontWeight: '600' },
-  emptyAction: { fontSize: 13, color: '#2980B9', fontWeight: '600', marginTop: 4 },
+  emptyText:   { fontSize: 14, color: '#8A7C6A', fontWeight: '600' },
+  emptyAction: { fontSize: 13, color: '#2D4A6A', fontWeight: '600', marginTop: 4 },
 
   listWrap: { padding: 16, paddingTop: 8, gap: 8 },
 });

@@ -23,27 +23,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
     
-    @ExceptionHandler(InvalidCredentialsException.class)
-    public ResponseEntity<ApiResponse<Void>> handleInvalidCredentials(InvalidCredentialsException ex) {
-        log.error("Invalid credentials: {}", ex.getMessage());
-        ApiResponse<Void> response = ApiResponse.error("INVALID_CREDENTIALS", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
-    }
-    
-    @ExceptionHandler(AccountLockedException.class)
-    public ResponseEntity<ApiResponse<Void>> handleAccountLocked(AccountLockedException ex) {
-        log.error("Account locked: {}", ex.getMessage());
-        ApiResponse<Void> response = ApiResponse.error("ACCOUNT_LOCKED", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
-    }
-    
-    @ExceptionHandler(InvalidSignatureException.class)
-    public ResponseEntity<ApiResponse<Void>> handleInvalidSignature(InvalidSignatureException ex) {
-        log.error("Invalid signature: {}", ex.getMessage());
-        ApiResponse<Void> response = ApiResponse.error("INVALID_SIGNATURE", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
-    }
-    
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<Void>> handleResourceNotFound(ResourceNotFoundException ex) {
         log.error("Resource not found: {}", ex.getMessage());

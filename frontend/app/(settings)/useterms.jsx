@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import {
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -9,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function TermsOfUse() {
   const router = useRouter();
@@ -36,62 +36,62 @@ export default function TermsOfUse() {
         
         <View style={styles.header}>
           <Text style={styles.title}>Terms of Use</Text>
-          <Text style={styles.subtitle}>Zeal Marketplace</Text>
+          <Text style={styles.subtitle}>TrustMark Platform</Text>
           <Text style={styles.date}>Last Updated: March 5, 2026</Text>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>1. Introduction</Text>
           <Text style={styles.text}>
-            Welcome to Zeal, a marketplace platform for purchasing physical collectible and luxury items supported by NFT technology. By using Zeal, you agree to these Terms of Use.
+            TrustMark is a creator-focused platform for catalog publishing, product authentication records, and fulfillment workflows. By using TrustMark, you agree to these Terms of Use.
           </Text>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>2. Services</Text>
           <Text style={styles.text}>
-            Zeal enables users to: (1) browse collections, (2) purchase items using Polygon cryptocurrency, (3) receive physical items produced by brands, (4) scan items to claim NFTs, and (5) transfer ownership via NFT.
+            TrustMark enables creators to set up brands and collections, generate product items and QR payloads, manage order operations, and maintain authenticity records for physical products.
           </Text>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>3. Eligibility</Text>
           <Text style={styles.text}>
-            You must be 18+ years old and capable of forming legally binding contracts. You are responsible for all activity under your account and wallet.
+            You must be 18+ years old and capable of forming legally binding contracts. You are responsible for all activity under your account credentials.
           </Text>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>4. Payments</Text>
+          <Text style={styles.sectionTitle}>4. Data and Fulfillment</Text>
           <Text style={styles.text}>
-            All purchases require Polygon (MATIC) cryptocurrency. Zeal facilitates transactions but does not custody funds or NFTs. Production and shipping are handled by partner brands.
+            Creators are responsible for accuracy of catalog, pricing, inventory, and fulfillment data entered into the platform.
           </Text>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>5. NFT Ownership</Text>
+          <Text style={styles.sectionTitle}>5. Authenticity Records</Text>
           <Text style={styles.text}>
-            NFTs represent proof of physical item ownership. Scanning links the physical item to your Polygon wallet. Ownership transfer requires both physical handover and NFT transfer.
+            TrustMark records product authenticity and lifecycle events through platform-managed QR workflows and audit logs.
           </Text>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>6. Limitation of Liability</Text>
           <Text style={styles.text}>
-            Zeal is provided "AS IS" without warranties. We are not liable for cryptocurrency volatility, blockchain issues, production delays, shipping problems, or lost/stolen items.
+            TrustMark is provided &quot;AS IS&quot; without warranties. We are not liable for indirect losses, third-party service outages, or fulfillment delays outside our direct control.
           </Text>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>7. Termination</Text>
           <Text style={styles.text}>
-            Zeal may suspend or terminate accounts for violations of these Terms. You may stop using Zeal at any time.
+            TrustMark may suspend or terminate accounts for violations of these Terms. You may stop using TrustMark at any time.
           </Text>
         </View>
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            By using Zeal, you confirm you have read, understood, and agree to these Terms of Use.
+            By using TrustMark, you confirm you have read, understood, and agree to these Terms of Use.
           </Text>
         </View>
       </ScrollView>

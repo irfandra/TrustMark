@@ -46,14 +46,11 @@ public class CollectionResponse {
     @Schema(description = "Release date", example = "2026-04-01")
     private LocalDate releaseDate;
 
-    @Schema(description = "Collection lifecycle status", example = "LISTED")
+    @Schema(description = "Collection lifecycle status", example = "ACTIVE")
     private CollectionStatus status;
 
     @Schema(description = "Collection tag shown in card", example = "Rare")
     private String tag;
-
-    @Schema(description = "Sales end datetime. Nullable when presale is not opened.", example = "2026-05-15T23:59:59")
-    private LocalDateTime salesEndAt;
 
     @Schema(description = "Tag background color", example = "#111")
     private String tagColor;

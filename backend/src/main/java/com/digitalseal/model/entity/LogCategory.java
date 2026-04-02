@@ -10,15 +10,15 @@ public enum LogCategory {
     ORDER,
     /** QR-code claim events: purchased-item claims and standalone claims */
     CLAIM,
-    /** On-chain interactions: premint, transfer, verification */
+    /** Legacy integration category kept for compatibility with historical logs */
     BLOCKCHAIN,
-    /** Product lifecycle: draft, publish, premint, list, update */
+    /** Product lifecycle: draft, publish, generate, list, update */
     PRODUCT,
-    /** Brand management: create, update, wallet connect */
+    /** Brand management: create and update */
     BRAND,
-    /** User profile updates, wallet connect, role changes */
+    /** User profile updates and role changes */
     USER,
-    /** Wallet verification and connection events */
+    /** Legacy wallet category kept for compatibility with historical logs */
     WALLET,
     /** Background jobs, startup, migrations, unclassified events */
     SYSTEM

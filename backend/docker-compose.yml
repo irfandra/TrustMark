@@ -1,20 +1,20 @@
-version: "3.8"
+name: trustmark-stack
 
 services:
   # MySQL Database
   mysql:
     image: mysql:8.0
-    container_name: digital-seal-mysql
+    container_name: trustmark-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-ds_password}
-      MYSQL_DATABASE: digital_seal
-      MYSQL_USER: ${DB_USERNAME:-ds_user}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-ds_password}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-trustmark_password}
+      MYSQL_DATABASE: ${DB_NAME:-trustmark}
+      MYSQL_USER: ${DB_USERNAME:-trustmark_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-trustmark_password}
     ports:
-      - "3306:3306"
+      - "${DB_HOST_PORT:-3307}:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - trustmark_mysql_data:/var/lib/mysql
       - ./db/init:/docker-entrypoint-initdb.d
     healthcheck:
       test:
@@ -26,59 +26,38 @@ services:
           "localhost",
           "-u",
           "root",
-          "-p${DB_PASSWORD:-ds_password}",
+          "-p${DB_PASSWORD:-trustmark_password}",
         ]
       interval: 5s
       timeout: 3s
       retries: 10
       start_period: 30s
-
-  # Hardhat Local Blockchain
-  hardhat:
-    image: node:20-alpine
-    container_name: digital-seal-hardhat
-    restart: unless-stopped
-    working_dir: /app
-    volumes:
-      - ../blockchain:/app
-    ports:
-      - "8545:8545"
-    command: >
-      sh -c "
-        npm install &&
-        npx hardhat node --hostname 0.0.0.0
-      "
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          'node -e "require(''http'').get(''http://localhost:8545'', r => process.exit(r.statusCode === 200 ? 0 : 1)).on(''error'', () => process.exit(1))"',
-        ]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+    networks:
+      - trustmark_net
 
   # Spring Boot Backend
   backend:
+    image: trustmark-backend:local
     build: .
-    container_name: digital-seal-backend
+    container_name: trustmark-backend
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "${BACKEND_HOST_PORT:-8082}:8080"
     environment:
       DB_USERNAME: ${DB_USERNAME:-root}
-      DB_PASSWORD: ${DB_PASSWORD:-ds_password}
-      JWT_SECRET: ${JWT_SECRET:-your-256-bit-secret-key-change-this-in-production-12345678901234567890}
-      WEB3_RPC_URL: ${WEB3_RPC_URL:-http://localhost:8545}
-      CONTRACT_ADDRESS: ${CONTRACT_ADDRESS:-}
-      PRIVATE_KEY: ${PRIVATE_KEY:-}
+      DB_PASSWORD: ${DB_PASSWORD:-trustmark_password}
+      DB_NAME: ${DB_NAME:-trustmark}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:8081}
     depends_on:
       mysql:
         condition: service_healthy
-      hardhat:
-        condition: service_healthy
+    networks:
+      - trustmark_net
 
 volumes:
-  mysql_data:
+  trustmark_mysql_data:
     driver: local
+
+networks:
+  trustmark_net:
+    name: trustmark_net

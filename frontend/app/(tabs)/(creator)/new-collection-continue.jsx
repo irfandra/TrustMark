@@ -1,14 +1,27 @@
 import React, { useState } from 'react';
 import {
-  ActivityIndicator, Alert, Dimensions, FlatList, SafeAreaView, ScrollView, View, Text, StyleSheet, TouchableOpacity,
+  ActivityIndicator, Alert, Dimensions, FlatList, ScrollView, View, Text, StyleSheet, TouchableOpacity,
   TextInput, Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { collectionService } from '@/services/collectionService';
+import WizardStepper from '@/components/shared/wizard-stepper';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width: screenWidth } = Dimensions.get('window');
 const isTablet = screenWidth >= 768;
+const palette = {
+  background: '#F6F1E8',
+  surface: '#FFFFFF',
+  text: '#1E2C3A',
+  muted: '#6B7280',
+  border: '#E5DED0',
+  accent: '#1E2C3A',
+  accentSoft: '#D8CCB6',
+  field: '#FCFAF5',
+  danger: '#B91C1C',
+};
 
 const parseParam = (value) => (Array.isArray(value) ? value[0] : value);
 const parseNumber = (value) => {
@@ -27,21 +40,57 @@ const parseSetupData = (rawSetup) => {
   }
 };
 
+const parseVariationsDraft = (rawVariations) => {
+  if (!rawVariations) return [];
+  try {
+    const parsed = JSON.parse(rawVariations);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((variation) => ({
+        id: String(variation?.id || Date.now()),
+        name: String(variation?.name || '').trim(),
+        price: String(variation?.price || '').trim(),
+        quantity: Number(variation?.quantity || 0),
+        description: String(variation?.description || '').trim(),
+      }))
+      .filter((variation) => variation.name);
+  } catch (_error) {
+    return [];
+  }
+};
+
 // ── Main Screen ────────────────────────────────────────────
 export default function NewCollectionContinue() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const setupData = parseSetupData(parseParam(params.setupData));
+  const initialVariations = parseVariationsDraft(parseParam(params.variationsDraft));
 
-  const [variations, setVariations] = useState([]);
+  const [variations, setVariations] = useState(initialVariations);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({ name: '', price: '', quantity: '', description: '' });
   const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const targetItems = Number(setupData?.totalItems || 0);
   const totalVariationQuantity = variations.reduce((sum, variation) => sum + Number(variation.quantity || 0), 0);
+
+  const handleBackToSetup = () => {
+    const serializedSetupData = JSON.stringify({
+      collectionName: setupData?.collectionName || '',
+      category: setupData?.category || '',
+      about: setupData?.about || '',
+      imageUrl: setupData?.imageUrl || '',
+    });
+
+    router.replace({
+      pathname: '/(tabs)/(creator)/new-collection',
+      params: {
+        setupData: serializedSetupData,
+        variationsDraft: JSON.stringify(variations),
+      },
+    });
+  };
 
   const handleAddVariation = () => {
     setEditingId(null);
@@ -132,14 +181,6 @@ export default function NewCollectionContinue() {
       return;
     }
 
-    if (totalVariationQuantity !== Number(setupData.totalItems)) {
-      Alert.alert(
-        'Quantity Mismatch',
-        `Total variation quantity must equal ${setupData.totalItems}. Current total is ${totalVariationQuantity}.`
-      );
-      return;
-    }
-
     try {
       setIsSubmitting(true);
       const createdCollection = await collectionService.createCollectionWithVariations({
@@ -147,8 +188,7 @@ export default function NewCollectionContinue() {
         category: setupData.category,
         about: setupData.about,
         imageUrl: setupData.imageUrl,
-        totalItems: setupData.totalItems,
-        rarity: setupData.rarity,
+        totalItems: totalVariationQuantity,
         variations,
       });
 
@@ -161,7 +201,7 @@ export default function NewCollectionContinue() {
           title: createdCollection.collectionName || setupData.collectionName,
           subtitle: createdCollection.season || setupData.category,
           status: 'Draft',
-          tag: createdCollection.tag || setupData.rarity,
+          tag: createdCollection.tag || 'In Stock',
           image: encodeURIComponent(image),
         },
       });
@@ -181,72 +221,67 @@ export default function NewCollectionContinue() {
 
   const ListHeader = () => (
     <>
-      <TouchableOpacity style={s.backRow} onPress={() => router.back()}>
-        <Ionicons name="chevron-back" size={18} color="#111" />
+      <TouchableOpacity style={s.backRow} onPress={handleBackToSetup}>
+        <Ionicons name="chevron-back" size={18} color={palette.text} />
         <Text style={s.backText}>Back</Text>
       </TouchableOpacity>
 
-      <Text style={s.logo}>ZEAL</Text>
+      <View style={s.headerCard}>
+        <Text style={s.logo}>TRUSTMARK</Text>
 
-      <View style={s.stepRow}>
-        <View style={s.stepInactive}>
-          <Text style={s.stepInactiveNumber}>1</Text>
-        </View>
-        <View style={s.stepInactiveTextWrap}>
-          <Text style={s.stepInactiveLabel}>Setup</Text>
-          <Text style={s.stepInactiveLabel}>Collections</Text>
-        </View>
+        <WizardStepper
+          palette={palette}
+          steps={[
+            { key: 'setup-collection', number: 1, label: 'Collections', active: false, onPress: handleBackToSetup },
+            { key: 'setup-variation', number: 2, label: 'Variations', active: true },
+          ]}
+        />
 
-        <View style={s.stepActive}>
-          <Text style={s.stepActiveNumber}>2</Text>
-        </View>
-        <View style={s.stepActiveTextWrap}>
-          <Text style={s.stepActiveLabel}>Setup</Text>
-          <Text style={s.stepActiveLabel}>Variations</Text>
-        </View>
+        <Text style={s.pageTitle}>Setup Variations</Text>
+        <Text style={s.pageSubtitle}>Add every variation and quantity to auto-calculate total items.</Text>
       </View>
 
-      <Text style={s.pageTitle}>Setup Variations</Text>
-
-      <View style={s.summaryRow}>
-        <View style={s.summaryInfoWrap}>
-          <Text style={s.summaryName} numberOfLines={1}>
-            {setupData?.collectionName || 'Collection'}
-          </Text>
-          <Text style={s.summaryCategory} numberOfLines={1}>
-            {setupData?.category || '-'}
-          </Text>
-          <Text style={s.summaryItems}>
-            {totalVariationQuantity.toLocaleString('en-US')} / {targetItems.toLocaleString('en-US')} Items
-          </Text>
+      <View style={s.summaryCard}>
+        <View style={s.summaryRow}>
+          <View style={s.summaryInfoWrap}>
+            <Text style={s.summaryName} numberOfLines={1}>
+              {setupData?.collectionName || 'Collection'}
+            </Text>
+            <Text style={s.summaryCategory} numberOfLines={1}>
+              {setupData?.category || '-'}
+            </Text>
+            <Text style={s.summaryItems}>
+              {totalVariationQuantity.toLocaleString('en-US')} Items (Auto calculated)
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={s.newVariationButton}
+            onPress={handleAddVariation}
+          >
+            <Ionicons name="add" size={16} color="#fff" />
+            <Text style={s.newVariationText}>New Variation</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={s.newVariationButton}
-          onPress={handleAddVariation}
-        >
-          <Ionicons name="add" size={16} color="#fff" />
-          <Text style={s.newVariationText}>New Variation</Text>
-        </TouchableOpacity>
-      </View>
 
-      <View style={s.columnLabels}>
-        <Text style={[s.columnLabel, { flex: 1, marginLeft: 8 }]}>Items</Text>
-        <Text style={[s.columnLabel, { flex: 1 }]}>Price</Text>
-        <Text style={[s.columnLabel, { flex: 1 }]}>Qty</Text>
-        <View style={s.actionHeaderSpacer} />
-      </View>
-
-      {variations.length === 0 && (
-        <View style={s.emptyWrap}>
-          <Text style={s.emptyText}>No variation added yet. Tap New Variation.</Text>
+        <View style={s.columnLabels}>
+          <Text style={[s.columnLabel, { flex: 1, marginLeft: 8 }]}>Items</Text>
+          <Text style={[s.columnLabel, { flex: 1 }]}>Price</Text>
+          <Text style={[s.columnLabel, { flex: 1 }]}>Qty</Text>
+          <View style={s.actionHeaderSpacer} />
         </View>
-      )}
+
+        {variations.length === 0 && (
+          <View style={s.emptyWrap}>
+            <Text style={s.emptyText}>No variation added yet. Tap New Variation.</Text>
+          </View>
+        )}
+      </View>
     </>
   );
 
   return (
     <SafeAreaView style={s.root}>
-      <View style={s.root}>
+      <View style={s.contentRoot}>
         <FlatList
           data={variations}
           keyExtractor={(item) => item.id}
@@ -261,7 +296,7 @@ export default function NewCollectionContinue() {
               <View style={s.variationRow}>
                 <Text style={s.variationName} numberOfLines={1}>{item.name}</Text>
                 <Text style={s.variationPrice} numberOfLines={1}>
-                  POL {numericPrice.toLocaleString('en-US')}
+                  USD {numericPrice.toLocaleString('en-US')}
                 </Text>
                 <Text style={s.variationQty} numberOfLines={1}>
                   {numericQty.toLocaleString('en-US')} Items
@@ -344,7 +379,7 @@ export default function NewCollectionContinue() {
 
                 <View style={s.formRow}>
                   <View style={[s.formGroup, { flex: 1 }]}>
-                    <Text style={s.formLabel}>Price (POL)</Text>
+                    <Text style={s.formLabel}>Price (USD)</Text>
                     <TextInput
                       style={s.formInput}
                       placeholder="0"
@@ -398,117 +433,105 @@ export default function NewCollectionContinue() {
 const s = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: palette.background,
+  },
+  contentRoot: {
+    flex: 1,
+    backgroundColor: palette.background,
   },
   scrollContent: {
     paddingHorizontal: isTablet ? 40 : 22,
-    paddingTop: 56,
-    paddingBottom: 40,
+    paddingTop: isTablet ? 56 : 42,
+    paddingBottom: 56,
   },
 
   backRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: '#EFE6D9',
   },
   backText: {
     fontSize: 15,
-    color: '#111',
-    marginLeft: 2,
+    color: palette.text,
+    marginLeft: 4,
+    fontWeight: '600',
+  },
+
+  headerCard: {
+    backgroundColor: palette.surface,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: palette.border,
+    paddingHorizontal: isTablet ? 24 : 18,
+    paddingVertical: isTablet ? 24 : 18,
+    marginBottom: 16,
   },
 
   logo: {
     fontSize: 28,
     fontWeight: '900',
     letterSpacing: 1,
-    marginBottom: 20,
-  },
-
-  stepRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 28,
-    gap: 10,
-  },
-  stepActive: {
-    width: 48,
-    height: 48,
-    borderRadius: 10,
-    backgroundColor: '#000',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepActiveNumber: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  stepActiveTextWrap: {},
-  stepActiveLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#111',
-    lineHeight: 17,
-  },
-  stepInactive: {
-    width: 48,
-    height: 48,
-    borderRadius: 10,
-    backgroundColor: '#ccc',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepInactiveNumber: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  stepInactiveTextWrap: {
-    marginRight: 20,
-  },
-  stepInactiveLabel: {
-    fontSize: 13,
-    color: '#aaa',
-    lineHeight: 17,
+    color: palette.text,
+    marginBottom: 16,
   },
 
   pageTitle: {
     fontSize: isTablet ? 32 : 26,
     fontWeight: '800',
-    color: '#111',
-    marginBottom: 20,
+    color: palette.text,
+    marginBottom: 8,
+  },
+  pageSubtitle: {
+    fontSize: 14,
+    color: palette.muted,
+    lineHeight: 20,
+  },
+
+  summaryCard: {
+    backgroundColor: palette.surface,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: palette.border,
+    paddingHorizontal: isTablet ? 24 : 18,
+    paddingVertical: isTablet ? 20 : 16,
+    marginBottom: 14,
   },
 
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   summaryInfoWrap: {
     flex: 1,
     marginRight: 12,
   },
   summaryName: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
-    color: '#111',
+    color: palette.text,
   },
   summaryCategory: {
     fontSize: 13,
-    color: '#333',
+    color: palette.text,
     marginTop: 2,
   },
   summaryItems: {
     fontSize: 13,
-    color: '#555',
+    color: palette.muted,
     marginTop: 2,
   },
   newVariationButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#000',
-    borderRadius: 10,
+    backgroundColor: palette.accent,
+    borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 16,
     gap: 6,
@@ -528,7 +551,7 @@ const s = StyleSheet.create({
   columnLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#111',
+    color: palette.text,
   },
   actionHeaderSpacer: {
     width: 88,
@@ -536,44 +559,45 @@ const s = StyleSheet.create({
 
   emptyWrap: {
     borderWidth: 1,
-    borderColor: '#e5e5e5',
-    borderRadius: 10,
+    borderColor: palette.border,
+    borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 12,
-    marginBottom: 10,
-    backgroundColor: '#fafafa',
+    marginBottom: 8,
+    backgroundColor: palette.field,
   },
   emptyText: {
     fontSize: 13,
-    color: '#666',
+    color: palette.muted,
   },
 
   variationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f0f0f0',
-    borderRadius: 12,
+    backgroundColor: palette.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: palette.border,
     paddingVertical: 18,
     paddingHorizontal: 12,
   },
   variationName: {
     flex: 1,
     fontSize: 13,
-    fontStyle: 'italic',
-    color: '#111',
+    color: palette.text,
     fontWeight: '500',
     paddingRight: 8,
   },
   variationPrice: {
     flex: 1,
     fontSize: 13,
-    color: '#111',
+    color: palette.text,
     paddingRight: 8,
   },
   variationQty: {
     flex: 1,
     fontSize: 13,
-    color: '#111',
+    color: palette.text,
     paddingRight: 8,
   },
   editButton: {
@@ -581,10 +605,10 @@ const s = StyleSheet.create({
     height: 36,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: palette.border,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: palette.field,
   },
   separator: {
     height: 10,
@@ -593,7 +617,7 @@ const s = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: '#cc0000',
+    backgroundColor: palette.danger,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 6,
@@ -602,16 +626,21 @@ const s = StyleSheet.create({
   bottomBar: {
     paddingHorizontal: isTablet ? 40 : 22,
     paddingVertical: 16,
-    backgroundColor: '#fff',
+    backgroundColor: palette.background,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: palette.border,
   },
   completeButton: {
-    backgroundColor: '#000',
+    backgroundColor: palette.accent,
     borderRadius: 14,
     paddingVertical: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#1E2C3A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 14,
+    elevation: 3,
   },
   completeButtonDisabled: {
     opacity: 0.5,
@@ -622,20 +651,20 @@ const s = StyleSheet.create({
     fontWeight: '700',
   },
 
-  modalSafe: { flex: 1, backgroundColor: '#fff' },
+  modalSafe: { flex: 1, backgroundColor: palette.background },
   modalContainer: { flex: 1 },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#e8e8e8' },
-  modalCloseText: { fontSize: 15, fontWeight: '600', color: '#111' },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#111' },
-  modalContent: { flex: 1, paddingHorizontal: 16, paddingVertical: 16 },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: palette.border, backgroundColor: palette.surface },
+  modalCloseText: { fontSize: 15, fontWeight: '600', color: palette.text },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: palette.text },
+  modalContent: { flex: 1, paddingHorizontal: 16, paddingVertical: 16, backgroundColor: palette.surface },
   formGroup: { marginBottom: 18 },
-  formLabel: { fontSize: 14, fontWeight: '700', color: '#111', marginBottom: 8 },
-  formInput: { backgroundColor: '#f8f8f8', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: '#111', borderWidth: 1, borderColor: '#e8e8e8' },
-  errorText: { marginTop: 6, fontSize: 12, color: '#B91C1C' },
+  formLabel: { fontSize: 14, fontWeight: '700', color: palette.text, marginBottom: 8 },
+  formInput: { backgroundColor: palette.field, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: palette.text, borderWidth: 1, borderColor: palette.border },
+  errorText: { marginTop: 6, fontSize: 12, color: palette.danger },
   formRow: { flexDirection: 'row', gap: 12 },
-  modalFooter: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 14, backgroundColor: '#f8f8f8', borderTopWidth: 1, borderTopColor: '#e8e8e8', gap: 12 },
-  modalCancelBtn: { flex: 1, borderWidth: 1.5, borderColor: '#111', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
-  modalCancelBtnText: { fontSize: 15, fontWeight: '700', color: '#111' },
-  modalSaveBtn: { flex: 1, backgroundColor: '#111', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
+  modalFooter: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 14, backgroundColor: palette.surface, borderTopWidth: 1, borderTopColor: palette.border, gap: 12 },
+  modalCancelBtn: { flex: 1, borderWidth: 1.5, borderColor: palette.accent, borderRadius: 10, paddingVertical: 14, alignItems: 'center', backgroundColor: '#FFFFFF' },
+  modalCancelBtnText: { fontSize: 15, fontWeight: '700', color: palette.accent },
+  modalSaveBtn: { flex: 1, backgroundColor: palette.accent, borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
   modalSaveBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 });

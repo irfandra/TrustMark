@@ -34,7 +34,6 @@ export const RoleProvider = ({ children }) => {
     brand_name: 'Hermes',
     company_email: 'hermes@plvmh.com',
     company_address: '24 Rue du Faubourg Saint-Honoré, 75008 Paris, France',
-    company_wallet_address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb',
     logo: 'https://via.placeholder.com/100/ff6600/ffffff?text=PL',
     description: 'Hermès International S.A., or simply Hermès, is a French high fashion luxury goods manufacturer established in 1837. It specializes in leather, lifestyle accessories, home furnishings, perfumery, jewelry, watches and ready-to-wear.',
     verified: true,

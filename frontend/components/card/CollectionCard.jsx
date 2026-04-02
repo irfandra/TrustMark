@@ -1,63 +1,49 @@
 // components/card/CollectionCard.jsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  ImageBackground,
   Animated,
   Image,
 } from "react-native";
-
-function useCountdown(totalSeconds) {
-  const [seconds, setSeconds] = useState(totalSeconds);
-  useEffect(() => {
-    if (!totalSeconds) return;
-    const interval = setInterval(() => {
-      setSeconds((s) => (s > 0 ? s - 1 : 0));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [totalSeconds]);
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-}
+import { Fonts } from "../../constants/theme";
 
 export default function CollectionCard({
   tag,
+  tagColor,
+  tagTextColor,
   brand,
   brandLogo,
   name,
   category,
   items,
   sold,
+  inStock,
   floorPrice,
   floorUsd,
   image,
-  saleEndsInDays,
-  saleEndsInSeconds,
   style,
   onPress,
 }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  const countdown = useCountdown(saleEndsInSeconds);
 
   const handlePressIn = () =>
     Animated.spring(scaleAnim, { toValue: 0.97, useNativeDriver: true }).start();
   const handlePressOut = () =>
     Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
 
-  const tagColor =
-    tag === "Rare" ? "#B8860B" : tag === "Limited" ? "#C0392B" : "#333";
-
-  const timerLabel =
-    saleEndsInSeconds != null
-      ? countdown
-      : saleEndsInDays != null
-      ? `${saleEndsInDays}d left`
-      : null;
+  const resolvedTagColor =
+    tagColor ||
+    (tag === "Low Stock"
+      ? "#D95F47"
+      : tag === "Medium Stock"
+        ? "#B6842D"
+        : tag === "Out of Stock"
+          ? "#6B5A4B"
+          : "#2D7A4E");
+  const resolvedTagTextColor = tagTextColor || "#FFF9F0";
 
   return (
     <Animated.View
@@ -70,82 +56,58 @@ export default function CollectionCard({
         onPressOut={handlePressOut}
         style={styles.card}
       >
-        <ImageBackground
-          source={{ uri: image }}
-          style={styles.bg}
-          imageStyle={styles.bgImage}
-        >
-          {/* Dark overlay */}
-          <View style={styles.overlay} />
+        <View style={styles.mediaWrap}>
+          <Image
+            source={{ uri: image }}
+            style={styles.mediaImage}
+            resizeMode="cover"
+          />
+        </View>
 
-          {/* TOP: Tag + Timer */}
-          <View style={styles.topRow}>
-            <View style={[styles.tagBadge, { backgroundColor: tagColor }]}>
-              <Text style={styles.tagText}>{tag}</Text>
-            </View>
-            {timerLabel && (
-              <View style={[styles.timerBadge, styles.glassSurface]}>
-                <Text style={styles.timerText}>⏱ {timerLabel}</Text>
-              </View>
-            )}
-          </View>
-
-          {/* BOTTOM CONTENT */}
-          <View style={styles.bottomContent}>
-            {/* Brand */}
-            <View style={styles.brandRow}>
-              {brandLogo && (
-                <Image
-                  source={{ uri: brandLogo }}
-                  style={styles.brandLogo}
-                  resizeMode="contain"
-                />
-              )}
-              <Text style={styles.brandName} numberOfLines={1}>
-                {brand}
-              </Text>
-            </View>
-
-            {/* Name + Category */}
-            <Text style={styles.collectionName} numberOfLines={2}>
+        <View style={styles.body}>
+          <View style={styles.titleRow}>
+            <Text style={styles.collectionName} numberOfLines={1}>
               {name}
             </Text>
-            <Text style={styles.categoryText} numberOfLines={1}>
-              {category}
-            </Text>
-
-            {/* Stats — blur */}
-            <View style={[styles.statsRow, styles.glassSurface]}>
-              <View style={styles.statBox}>
-                <Text style={styles.statNumber}>
-                  {(items ?? 0).toLocaleString()}
-                </Text>
-                <Text style={styles.statLabel}>Items</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statBox}>
-                <Text style={styles.statNumber}>
-                  {(sold ?? 0).toLocaleString()}
-                </Text>
-                <Text style={styles.statLabel}>Sold</Text>
-              </View>
-            </View>
-
-            {/* Floor Price — blur */}
-            <View style={[styles.floorBox, styles.glassSurface]}>
-              <Text style={styles.floorLabel}>Floor Price</Text>
-              <View style={styles.floorValueRow}>
-                <View style={styles.polDot} />
-                <View>
-                  <Text style={styles.floorAmountText}>{floorPrice}</Text>
-                  {floorUsd ? (
-                    <Text style={styles.floorUsdText}>{floorUsd}</Text>
-                  ) : null}
-                </View>
-              </View>
+            <View style={[styles.tagBadge, { backgroundColor: resolvedTagColor }]}> 
+              <Text style={[styles.tagText, { color: resolvedTagTextColor }]}>{tag}</Text>
             </View>
           </View>
-        </ImageBackground>
+
+          <Text style={styles.categoryText} numberOfLines={1}>
+            {category}
+          </Text>
+
+          <View style={styles.brandRow}>
+            {brandLogo ? (
+              <Image
+                source={{ uri: brandLogo }}
+                style={styles.brandLogo}
+                resizeMode="contain"
+              />
+            ) : (
+              <View style={styles.brandFallback}>
+                <Text style={styles.brandFallbackText}>
+                  {String(brand || "?").slice(0, 1).toUpperCase()}
+                </Text>
+              </View>
+            )}
+            <Text style={styles.brandName} numberOfLines={1}>
+              {brand}
+            </Text>
+          </View>
+
+          <View style={styles.infoRow}>
+            <Text style={styles.infoText}>Items {(items ?? 0).toLocaleString()}</Text>
+            <Text style={styles.infoDot}>•</Text>
+            <Text style={styles.infoText}>In Stock {((inStock ?? sold) ?? 0).toLocaleString()}</Text>
+          </View>
+
+          <View style={styles.floorRow}>
+            <Text style={styles.floorLabel}>Floor Price</Text>
+            <Text style={styles.floorAmountText}>{floorPrice}</Text>
+          </View>
+        </View>
       </TouchableOpacity>
     </Animated.View>
   );
@@ -153,158 +115,125 @@ export default function CollectionCard({
 
 const styles = StyleSheet.create({
   wrapper: {
-    borderRadius: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  glassSurface: {
-    backgroundColor: "rgba(40,40,40,0.52)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.16)",
+    borderRadius: 24,
+    shadowColor: "#1A2640",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.14,
+    shadowRadius: 18,
+    elevation: 5,
   },
   card: {
-    flex: 1,
-    borderRadius: 16,
-    overflow: "hidden",
-  },
-  bg: {
-    flex: 1,
-    justifyContent: "space-between",
-  },
-  bgImage: {
-    borderRadius: 16,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.45)",
-  },
-  topRow: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    borderRadius: 24,
+    overflow: "hidden",
+    backgroundColor: "#F6F1E8",
+    borderWidth: 1,
+    borderColor: "#D4D9E6",
+  },
+  mediaWrap: {
+    width: 112,
+    minHeight: 126,
     padding: 10,
-    gap: 4,
+    backgroundColor: "#F6F1E8",
+  },
+  mediaImage: {
+    flex: 1,
+    borderRadius: 16,
   },
   tagBadge: {
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 8,
+    borderRadius: 999,
   },
   tagText: {
-    color: "#fff",
     fontWeight: "800",
     fontSize: 10,
+    letterSpacing: 0.3,
   },
-  timerBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 8,
-    overflow: "hidden",
-    flexShrink: 1,
+  body: {
+    flex: 1,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 12,
+    gap: 7,
   },
-  timerText: {
-    color: "#fff",
-    fontSize: 10,
-    fontWeight: "600",
-  },
-  bottomContent: {
-    padding: 10,
-    gap: 6,
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
   },
   brandRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: 6,
   },
   brandLogo: {
-    width: 16,
-    height: 16,
-    borderRadius: 3,
+    width: 18,
+    height: 18,
+    borderRadius: 4,
   },
-  brandName: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: "rgba(255,255,255,0.7)",
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-    flex: 1,
-  },
-  collectionName: {
-    fontSize: 15,
-    fontWeight: "900",
-    color: "#fff",
-    lineHeight: 19,
-  },
-  categoryText: {
-    fontSize: 10,
-    color: "rgba(255,255,255,0.6)",
-    marginBottom: 2,
-  },
-  statsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 10,
-    overflow: "hidden",
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-  },
-  statBox: {
-    flex: 1,
-    alignItems: "center",
-  },
-  statDivider: {
-    width: 1,
-    height: 22,
-    backgroundColor: "rgba(255,255,255,0.3)",
-    marginHorizontal: 6,
-  },
-  statNumber: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: "#fff",
-  },
-  statLabel: {
-    fontSize: 9,
-    color: "rgba(255,255,255,0.65)",
-    fontWeight: "600",
-  },
-  floorBox: {
-    borderRadius: 10,
-    overflow: "hidden",
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    gap: 4,
-  },
-  floorLabel: {
-    fontSize: 9,
-    fontWeight: "700",
-    color: "rgba(255,255,255,0.6)",
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-  },
-  floorValueRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  polDot: {
+  brandFallback: {
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: "#7B3FE4",
+    backgroundColor: "#eeeeee",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  brandFallbackText: {
+    color: "#F4F6FB",
+    fontSize: 9,
+    fontWeight: "800",
+  },
+  brandName: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#4A5672",
+    flex: 1,
+  },
+  collectionName: {
+    fontSize: 18,
+    fontFamily: Fonts.serif,
+    fontWeight: "700",
+    color: "#1A2438",
+    flex: 1,
+  },
+  categoryText: {
+    fontSize: 12,
+    color: "#818DA4",
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  infoText: {
+    fontSize: 11,
+    color: "#57617A",
+    fontWeight: "700",
+  },
+  infoDot: {
+    fontSize: 12,
+    color: "#7C85A0",
+    fontWeight: "800",
+  },
+  floorRow: {
+    marginTop: 2,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  floorLabel: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#5F6A84",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
   },
   floorAmountText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "800",
-    color: "#fff",
-  },
-  floorUsdText: {
-    fontSize: 10,
-    color: "rgba(255,255,255,0.55)",
-    fontStyle: "italic",
-    marginTop: 1,
+    color: "#000000",
   },
 });

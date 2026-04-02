@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Product item (individual NFT unit) response")
+@Schema(description = "Product item response")
 public class ProductItemResponse {
     
     @Schema(description = "Item ID", example = "1")
@@ -30,25 +30,13 @@ public class ProductItemResponse {
     @Schema(description = "Index within the product", example = "1")
     private Integer itemIndex;
     
-    @Schema(description = "NFT token ID on blockchain")
-    private Long tokenId;
-    
-    @Schema(description = "Metadata URI (IPFS)")
+    @Schema(description = "Metadata URI")
     private String metadataUri;
-    
-    @Schema(description = "Mint transaction hash")
-    private String mintTxHash;
-
-    @Schema(description = "QR payload for NFT ownership proof")
-    private String nftQrCode;
-
-    @Schema(description = "QR payload printed on product label")
-    private String productLabelQrCode;
 
     @Schema(description = "QR payload printed on certificate")
     private String certificateQrCode;
     
-    @Schema(description = "Digital seal status", example = "PRE_MINTED")
+    @Schema(description = "Authentication status", example = "PRE_MINTED")
     private SealStatus sealStatus;
     
     @Schema(description = "Current owner wallet address")
@@ -60,7 +48,7 @@ public class ProductItemResponse {
     @Schema(description = "Current owner username")
     private String currentOwnerUsername;
     
-    @Schema(description = "When the seal was minted")
+    @Schema(description = "When certificate QR was generated")
     private LocalDateTime mintedAt;
     
     @Schema(description = "When the item was sold")

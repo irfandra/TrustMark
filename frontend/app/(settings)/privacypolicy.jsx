@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import {
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -9,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function PrivacyPolicy() {
   const router = useRouter();
@@ -36,56 +36,56 @@ export default function PrivacyPolicy() {
         
         <View style={styles.header}>
           <Text style={styles.title}>Privacy Policy</Text>
-          <Text style={styles.subtitle}>Zeal Marketplace</Text>
+          <Text style={styles.subtitle}>TrustMark Platform</Text>
           <Text style={styles.date}>Last Updated: March 5, 2026</Text>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>1. Information We Collect</Text>
           <Text style={styles.text}>
-            We collect wallet addresses, transaction data, shipping addresses (for physical delivery), and device information. No email addresses or traditional personal data is required.
+            We collect account profile details, product and inventory data entered by creators, shipping information for fulfillment, and basic device diagnostics.
           </Text>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>2. How We Use Data</Text>
           <Text style={styles.text}>
-            Wallet addresses verify ownership and facilitate NFT transfers on Polygon. Shipping addresses are shared only with partner brands for physical delivery. Transaction data confirms purchases.
+            We use your data to run creator workflows such as catalog setup, item lifecycle management, QR-based authentication records, and order fulfillment.
           </Text>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>3. Third Parties</Text>
           <Text style={styles.text}>
-            Polygon blockchain (public). Partner brands receive shipping addresses for production/delivery. No data is sold to advertisers or third parties.
+            We share only required operational data with trusted infrastructure providers and fulfillment partners. We do not sell personal data to advertisers.
           </Text>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>4. Blockchain Data</Text>
+          <Text style={styles.sectionTitle}>4. Data Retention</Text>
           <Text style={styles.text}>
-            All Polygon transactions are public and permanent. Wallet addresses and NFT transfers cannot be deleted or made private. Zeal does not control blockchain data.
+            Operational records are retained for security, auditability, and support. Data retention periods follow legal and contractual requirements.
           </Text>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>5. Security</Text>
           <Text style={styles.text}>
-            We use industry-standard security for our services. However, you are responsible for securing your crypto wallet and private keys. Zeal cannot recover lost funds or access wallets.
+            We use industry-standard safeguards for data in transit and at rest. You are responsible for account credential security and device access control.
           </Text>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>6. Children's Privacy</Text>
+          <Text style={styles.sectionTitle}>6. Children&apos;s Privacy</Text>
           <Text style={styles.text}>
-            Zeal is not intended for users under 18. We do not knowingly collect data from children.
+            TrustMark is not intended for users under 18. We do not knowingly collect data from children.
           </Text>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>7. Changes to Policy</Text>
           <Text style={styles.text}>
-            We may update this Privacy Policy. Continued use of Zeal after changes constitutes acceptance.
+            We may update this Privacy Policy. Continued use of TrustMark after changes constitutes acceptance.
           </Text>
         </View>
 

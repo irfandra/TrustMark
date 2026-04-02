@@ -55,11 +55,14 @@ public class OrderResponse {
     @Schema(description = "Quantity ordered", example = "1")
     private Integer quantity;
     
-    @Schema(description = "Unit price", example = "0.5")
+    @Schema(description = "Unit price in USD", example = "199.99")
     private BigDecimal unitPrice;
     
-    @Schema(description = "Total price", example = "0.5")
+    @Schema(description = "Total price in USD", example = "199.99")
     private BigDecimal totalPrice;
+
+    @Schema(description = "ISO 4217 currency code", example = "USD")
+    private String currency;
     
     @Schema(description = "Payment transaction hash")
     private String paymentTxHash;
@@ -72,9 +75,6 @@ public class OrderResponse {
     
     @Schema(description = "Tracking number")
     private String trackingNumber;
-    
-    @Schema(description = "Seal transfer transaction hash")
-    private String sealTransferTxHash;
     
     @Schema(description = "When order was created")
     private LocalDateTime createdAt;

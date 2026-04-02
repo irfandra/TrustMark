@@ -1,2 +1,0 @@
--- Add username column to users table
-ALTER TABLE users ADD COLUMN user_name VARCHAR(255) UNIQUE;

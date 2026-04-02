@@ -9,14 +9,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -50,13 +48,11 @@ public class CollectionController {
                     description = "Not the owner of this brand"
             )
     })
-    @SecurityRequirement(name = "bearerAuth")
     @PostMapping
     public ResponseEntity<ApiResponse<CollectionResponse>> createCollection(
-            Authentication authentication,
             @PathVariable Long brandId,
             @Valid @RequestBody CreateCollectionRequest request) {
-        Long userId = Long.parseLong(authentication.getName());
+        Long userId = null;
         log.info("Collection creation request for brand ID: {} from user ID: {}", brandId, userId);
         CollectionResponse response = collectionService.createCollection(userId, brandId, request);
         return ResponseEntity
@@ -127,14 +123,12 @@ public class CollectionController {
                     description = "Collection not found"
             )
     })
-    @SecurityRequirement(name = "bearerAuth")
     @PutMapping("/{collectionId}")
     public ResponseEntity<ApiResponse<CollectionResponse>> updateCollection(
-            Authentication authentication,
             @PathVariable Long brandId,
             @PathVariable Long collectionId,
             @Valid @RequestBody UpdateCollectionRequest request) {
-        Long userId = Long.parseLong(authentication.getName());
+                Long userId = null;
         log.info("Collection update request for collection ID: {} under brand ID: {} from user ID: {}", collectionId, brandId, userId);
         CollectionResponse response = collectionService.updateCollection(userId, brandId, collectionId, request);
         return ResponseEntity.ok(ApiResponse.success(response, "Collection updated successfully"));
@@ -158,13 +152,11 @@ public class CollectionController {
                     description = "Collection not found"
             )
     })
-    @SecurityRequirement(name = "bearerAuth")
     @DeleteMapping("/{collectionId}")
     public ResponseEntity<ApiResponse<Void>> deleteCollection(
-            Authentication authentication,
             @PathVariable Long brandId,
             @PathVariable Long collectionId) {
-        Long userId = Long.parseLong(authentication.getName());
+                Long userId = null;
         log.info("Collection delete request for collection ID: {} under brand ID: {} from user ID: {}", collectionId, brandId, userId);
         collectionService.deleteCollection(userId, brandId, collectionId);
         return ResponseEntity.ok(ApiResponse.success(null, "Collection deleted successfully"));

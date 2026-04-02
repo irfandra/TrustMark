@@ -2,9 +2,9 @@ import { apiRequest } from './apiClient';
 import { DEFAULT_BRAND_ID } from './brandService';
 
 const STATUS_META = {
-  PENDING: { section: 'Request', actionLabel: 'Process', deliveryStatus: 'Request' },
-  PAYMENT_RECEIVED: { section: 'Request', actionLabel: 'Process', deliveryStatus: 'Request' },
-  PROCESSING: { section: 'On Prepare', actionLabel: 'Ship', deliveryStatus: 'On Prepare' },
+  PENDING: { section: 'On Shipment', actionLabel: 'Ship', deliveryStatus: 'On Shipment' },
+  PAYMENT_RECEIVED: { section: 'On Shipment', actionLabel: 'Ship', deliveryStatus: 'On Shipment' },
+  PROCESSING: { section: 'On Shipment', actionLabel: 'Ship', deliveryStatus: 'On Shipment' },
   SHIPPED: { section: 'On Shipment', actionLabel: 'Wait for Claim', deliveryStatus: 'On Shipment' },
   DELIVERED: { section: 'On Shipment', actionLabel: 'Wait for Claim', deliveryStatus: 'On Shipment' },
   COMPLETED: { section: 'Completed', actionLabel: 'View', deliveryStatus: 'Completed' },
@@ -24,7 +24,7 @@ const parsePageContent = (value) => {
   return [];
 };
 
-const formatPol = (value) => {
+const formatUsd = (value) => {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) {
     return '--';
@@ -106,7 +106,8 @@ const mapOrderCard = (order, product) => {
     displayId: `#${order.itemSerial || order.orderNumber || order.id}`,
     itemName: order.productName || product?.productName || 'Unnamed Item',
     collection: product?.collectionName || 'Collection',
-    pol: Number(order.totalPrice || 0),
+    amount: Number(order.totalPrice || 0),
+    currency: order?.currency || product?.currency || 'USD',
     actionLabel: meta.actionLabel,
     createdAt: order.createdAt || null,
   };
@@ -114,7 +115,17 @@ const mapOrderCard = (order, product) => {
 
 const buildTrackingNumber = (orderId) => {
   const stamp = Date.now().toString().slice(-8);
-  return `ZEAL-${orderId}-${stamp}`;
+  return `TRUSTMARK-${orderId}-${stamp}`;
+};
+
+const moveOrderToShipment = async (service, orderId) => {
+  try {
+    return await service.shipCreatorOrder(orderId);
+  } catch (_shipError) {
+    // Some backend states require process before ship; fallback handles both states.
+    await service.processCreatorOrder(orderId);
+    return service.shipCreatorOrder(orderId);
+  }
 };
 
 const deriveDelivery = (order, meta) => {
@@ -124,10 +135,29 @@ const deriveDelivery = (order, meta) => {
     claimedTime: formatDate(order?.completedAt || order?.deliveredAt),
     arrivalTime: formatDate(order?.deliveredAt || order?.shippedAt),
     address: order?.shippingAddress || '-',
+    trackingNumber: order?.trackingNumber || '-',
     recipientName: '-',
     phone: '-',
   };
 };
+
+const mapInStockItemToShipmentCandidate = (item, product) => ({
+  shipmentSource: 'in-stock',
+  shipmentKey: `in-stock:${item.id}`,
+  productItemId: item.id,
+  orderId: null,
+  orderNumber: null,
+  status: 'In Stock',
+  rawStatus: 'IN_STOCK',
+  itemId: item.itemSerial || String(item.id),
+  displayId: `#${item.itemSerial || item.id}`,
+  itemName: item.productName || product?.productName || 'Unnamed Item',
+  collection: product?.collectionName || 'Collection',
+  amount: Number(product?.price || 0),
+  currency: product?.currency || 'USD',
+  actionLabel: 'Ship',
+  createdAt: item?.createdAt || null,
+});
 
 export const orderService = {
   async getCreatorOrders(brandId = DEFAULT_BRAND_ID) {
@@ -167,6 +197,40 @@ export const orderService = {
       });
   },
 
+  async getCreatorInStockShipmentCandidates(brandId = DEFAULT_BRAND_ID) {
+    const collections = await apiRequest(`/brands/${brandId}/collections`).catch(() => []);
+    if (!Array.isArray(collections) || collections.length === 0) {
+      return [];
+    }
+
+    const groupedProducts = await Promise.all(
+      collections.map(async (collection) => {
+        const products = await apiRequest(`/collections/${collection.id}/products`).catch(() => []);
+        return {
+          collection,
+          products: Array.isArray(products) ? products : [],
+        };
+      })
+    );
+
+    const flatProducts = groupedProducts.flatMap(({ products }) => products);
+
+    const inStockRows = await Promise.all(
+      flatProducts.map(async (product) => {
+        const items = await apiRequest(`/products/${product.id}/items`).catch(() => []);
+        if (!Array.isArray(items)) {
+          return [];
+        }
+
+        return items
+          .filter((item) => String(item?.sealStatus || '').toUpperCase() === 'PRE_MINTED')
+          .map((item) => mapInStockItemToShipmentCandidate(item, product));
+      })
+    );
+
+    return inStockRows.flat();
+  },
+
   async getCreatorOrderDetail(orderId) {
     if (!orderId) {
       throw new Error('Missing order id');
@@ -190,6 +254,7 @@ export const orderService = {
     const fromLabel = order?.brandOwnerUsername
       ? `@${order.brandOwnerUsername}`
       : toHandle(product?.brandName);
+    const currency = order?.currency || product?.currency || 'USD';
 
     return {
       id: `#${order.itemSerial || order.orderNumber || order.id}`,
@@ -211,20 +276,18 @@ export const orderService = {
       ],
       transaction: {
         currentOwner: ownerLabel,
-        contract: product?.contractAddress || shortAddress(orderItem?.currentOwnerWallet),
+        record: product?.contractAddress || shortAddress(orderItem?.currentOwnerWallet),
         from: fromLabel,
         to: ownerLabel,
-        value: `POL ${formatPol(order?.totalPrice)}`,
+        value: `${currency} ${formatUsd(order?.totalPrice)}`,
         usd: '',
       },
       delivery: deriveDelivery(order, statusMeta),
       recipientName: order?.buyerName || '-',
       recipientPhone: order?.buyerPhoneNumber || '-',
       qrValue:
-        orderItem?.nftQrCode ||
-        orderItem?.productLabelQrCode ||
         orderItem?.certificateQrCode ||
-        `digitalseal://order/${order.orderNumber}`,
+        `trustmark://certificate/${order.itemSerial || order.orderNumber}`,
     };
   },
 
@@ -238,15 +301,76 @@ export const orderService = {
     });
   },
 
-  async shipCreatorOrder(orderId) {
+  async shipCreatorOrders(orderIds = []) {
+    const safeOrderIds = Array.from(
+      new Set((Array.isArray(orderIds) ? orderIds : []).filter((id) => id != null))
+    );
+
+    if (safeOrderIds.length === 0) {
+      throw new Error('No orders selected');
+    }
+
+    const results = await Promise.allSettled(
+      safeOrderIds.map((orderId) => moveOrderToShipment(this, orderId))
+    );
+
+    const failedIds = results
+      .map((result, index) => (result.status === 'rejected' ? safeOrderIds[index] : null))
+      .filter((value) => value != null);
+
+    return {
+      processed: safeOrderIds.length - failedIds.length,
+      failed: failedIds.length,
+      failedIds,
+    };
+  },
+
+  async shipCreatorInStockItems(productItemIds = []) {
+    const safeItemIds = Array.from(
+      new Set((Array.isArray(productItemIds) ? productItemIds : []).filter((id) => id != null))
+    );
+
+    if (safeItemIds.length === 0) {
+      throw new Error('No in-stock items selected');
+    }
+
+    const results = await Promise.allSettled(
+      safeItemIds.map((itemId) =>
+        apiRequest(`/orders/items/${itemId}/ship`, {
+          method: 'POST',
+          body: {
+            trackingNumber: buildTrackingNumber(`ITEM-${itemId}`),
+          },
+        })
+      )
+    );
+
+    const failedIds = results
+      .map((result, index) => (result.status === 'rejected' ? safeItemIds[index] : null))
+      .filter((value) => value != null);
+
+    return {
+      processed: safeItemIds.length - failedIds.length,
+      failed: failedIds.length,
+      failedIds,
+    };
+  },
+
+  async shipCreatorOrder(orderId, deliveryDetails = {}) {
     if (!orderId) {
       throw new Error('Missing order id');
     }
 
+    const trackingNumber = String(deliveryDetails?.trackingNumber || '').trim() || buildTrackingNumber(orderId);
+
     return apiRequest(`/orders/${orderId}/ship`, {
       method: 'POST',
       body: {
-        trackingNumber: buildTrackingNumber(orderId),
+        trackingNumber,
+        recipientName: deliveryDetails?.recipientName,
+        recipientPhone: deliveryDetails?.recipientPhone,
+        shippingAddress: deliveryDetails?.shippingAddress,
+        arrivalTimeEstimation: deliveryDetails?.arrivalTimeEstimation,
       },
     });
   },

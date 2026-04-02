@@ -37,6 +37,6 @@ public class CreateProductRequest {
     
     @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than 0")
     @Digits(integer = 10, fraction = 8, message = "Invalid price format")
-    @Schema(description = "Price per unit", example = "0.5")
+    @Schema(description = "Price per unit in USD", example = "199.99")
     private BigDecimal price;
 }

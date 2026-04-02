@@ -39,13 +39,14 @@ export default function BrandCard({ id, name, logo, image, style }) {
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 16,
+    borderRadius: 20,
     overflow: "hidden",
     aspectRatio: 1,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
+    shadowColor: "#12253A",
+    shadowOpacity: 0.16,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
   },
   bgImage: {
     ...StyleSheet.absoluteFillObject,
@@ -54,7 +55,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.55)",
+    backgroundColor: "rgba(18,37,58,0.58)",
   },
   footer: {
     flex: 1,
@@ -70,7 +71,9 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#fff",
+    backgroundColor: "#FFF9F0",
+    borderWidth: 1,
+    borderColor: "#E4D9C9",
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -80,8 +83,9 @@ const styles = StyleSheet.create({
     height: 40,
   },
   name: {
-    fontSize: 20,
+    fontSize: 21,
     fontWeight: "700",
-    color: "#fff",
+    color: "#FFF9F0",
+    letterSpacing: 0.3,
   },
 });

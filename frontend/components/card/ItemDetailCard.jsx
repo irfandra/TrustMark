@@ -9,12 +9,13 @@ import {
   StyleSheet,
   Animated,
 } from 'react-native';
+import { Fonts } from '../../constants/theme';
 
 const STATUS_CONFIG = {
   Requested: { color: '#888',    label: 'Requested' },
-  Prepared:  { color: '#2980B9', label: 'Prepared'  },
-  Shipped:   { color: '#E67E22', label: 'Shipped'   },
-  Claimed:   { color: '#27AE60', label: 'Claimed'   },
+  Prepared:  { color: '#2D4A6A', label: 'Prepared'  },
+  Shipped:   { color: '#B6842D', label: 'Shipped'   },
+  Claimed:   { color: '#3D7A5E', label: 'Claimed'   },
 };
 
 export default function ItemDetailCard({
@@ -32,10 +33,10 @@ export default function ItemDetailCard({
     Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
 
   const tagColor =
-    item.rarity === 'Rare'    ? '#B8860B' :
-    item.rarity === 'Limited' ? '#C0392B' :
+    item.rarity === 'Rare'    ? '#B6842D' :
+    item.rarity === 'Limited' ? '#D95F47' :
     item.tagColor             ? item.tagColor :
-                                '#333';
+                                '#2D4A6A';
 
   const tagLabel     = item.rarity ?? item.tag ?? '';
   const statusConfig = item.status ? STATUS_CONFIG[item.status] : null;
@@ -135,9 +136,7 @@ export default function ItemDetailCard({
                   <View style={styles.polDot} />
                   <View>
                     <Text style={styles.price}>{item.price}</Text>
-                    {item.usd && (
-                      <Text style={styles.usd}>{item.usd}</Text>
-                    )}
+                    {!!item.usd && <Text style={styles.usd}>{item.usd}</Text>}
                   </View>
                 </View>
               </View>
@@ -151,12 +150,12 @@ export default function ItemDetailCard({
 
 const styles = StyleSheet.create({
   wrapper: {
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
+    borderRadius: 20,
+    shadowColor: '#12253A',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    elevation: 9,
     overflow: 'hidden',
   },
   halfWidth: {
@@ -165,11 +164,11 @@ const styles = StyleSheet.create({
   },
   wrapperSelected: {
     borderWidth: 2.5,
-    borderColor: '#27AE60',
+    borderColor: '#D95F47',
   },
   card: {
     flex: 1,
-    borderRadius: 16,
+    borderRadius: 20,
     overflow: 'hidden',
   },
   cardImage: {
@@ -178,12 +177,12 @@ const styles = StyleSheet.create({
     minHeight: 220,
   },
   cardImageStyle: {
-    borderRadius: 16,
+    borderRadius: 20,
   },
   cardOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    borderRadius: 16,
+    backgroundColor: 'rgba(18,37,58,0.52)',
+    borderRadius: 20,
   },
 
   // ── Top row ──
@@ -202,20 +201,20 @@ const styles = StyleSheet.create({
   },
   statusDot: {
     width: 5, height: 5, borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.8)',
+    backgroundColor: 'rgba(255,249,240,0.9)',
   },
   statusText: { color: '#fff', fontSize: 9, fontWeight: '700' },
 
   // ✅ Tag badge (marketplace/authcheck)
   tagBadge: {
-    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8,
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999,
   },
   tagText: { color: '#fff', fontWeight: '800', fontSize: 10 },
 
   // ✅ Selected checkmark
   checkmark: {
     width: 24, height: 24, borderRadius: 12,
-    backgroundColor: '#27AE60',
+    backgroundColor: '#D95F47',
     alignItems: 'center', justifyContent: 'center',
   },
   checkmarkText: { color: '#fff', fontSize: 13, fontWeight: '800' },
@@ -231,40 +230,48 @@ const styles = StyleSheet.create({
     borderRadius: 3, backgroundColor: '#f96a1b',
   },
   brandName: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255,249,240,0.86)',
     fontSize: 10, fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 0.6, flex: 1,
+    letterSpacing: 0.7, flex: 1,
   },
   itemId: {
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(255,249,240,0.63)',
     fontSize: 9, fontWeight: '500',
   },
   itemName: {
-    color: '#fff', fontSize: 15, fontWeight: '900',
+    color: '#FFF9F0',
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: Fonts.serif,
   },
   itemSub: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255,249,240,0.78)',
     fontSize: 10, fontWeight: '500',
   },
   itemEdition: {
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(255,249,240,0.65)',
     fontSize: 10, fontStyle: 'italic', marginBottom: 4,
   },
   priceBox: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    borderRadius: 10, padding: 8, gap: 3, marginTop: 4,
+    backgroundColor: 'rgba(255,249,240,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.34)',
+    borderRadius: 12,
+    padding: 8,
+    gap: 3,
+    marginTop: 4,
   },
   priceLabel: {
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(255,249,240,0.72)',
     fontSize: 8, fontWeight: '700',
     textTransform: 'uppercase', letterSpacing: 0.6,
   },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  polDot:   { width: 14, height: 14, borderRadius: 7, backgroundColor: '#7B3FE4' },
+  polDot:   { width: 14, height: 14, borderRadius: 7, backgroundColor: '#D95F47' },
   price:    { color: '#fff', fontSize: 12, fontWeight: '800' },
   usd: {
-    color: 'rgba(255,255,255,0.55)',
+    color: 'rgba(255,249,240,0.72)',
     fontSize: 10, fontStyle: 'italic', marginTop: 1,
   },
 });

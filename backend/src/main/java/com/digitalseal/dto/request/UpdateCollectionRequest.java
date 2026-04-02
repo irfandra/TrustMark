@@ -4,7 +4,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
 import com.digitalseal.model.entity.CollectionStatus;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import lombok.Data;
 
 @Data
@@ -32,15 +31,12 @@ public class UpdateCollectionRequest {
     @Schema(description = "Release date", example = "2026-04-01")
     private LocalDate releaseDate;
 
-    @Schema(description = "Collection lifecycle status", example = "LISTED")
+    @Schema(description = "Collection lifecycle status", example = "ACTIVE")
     private CollectionStatus status;
 
     @Size(max = 50, message = "Tag must not exceed 50 characters")
     @Schema(description = "Collection tag shown in card", example = "Limited")
     private String tag;
-
-    @Schema(description = "Sales end datetime. Nullable and only set when presale is opened.", example = "2026-05-15T23:59:59")
-    private LocalDateTime salesEndAt;
 
     @Size(max = 20, message = "Tag color must not exceed 20 characters")
     @Schema(description = "Tag background color", example = "#111")

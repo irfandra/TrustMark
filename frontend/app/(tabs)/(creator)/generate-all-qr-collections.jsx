@@ -7,42 +7,15 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
   Alert,
   Share,
   Image,
   Modal,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { collectionService } from '@/services/collectionService';
 import LoadingPulse from '@/components/shared/loading-pulse';
-
-const parseParam = (value) => (Array.isArray(value) ? value[0] : value);
-
-const SCOPE_OPTIONS = [
-  {
-    key: 'all_products',
-    label: 'All Products',
-    icon: 'layers-outline',
-    description: 'Generate for all product items across every product.',
-  },
-  {
-    key: 'per_product',
-    label: 'Per Product',
-    icon: 'cube-outline',
-    description: 'Generate only for product items in one selected product.',
-  },
-];
-
-const QR_TYPE_OPTIONS = [
-  { key: 'nft', label: 'NFT' },
-  { key: 'label', label: 'Label' },
-  { key: 'certificate', label: 'Certificate' },
-];
-
-const getQrTypeLabel = (key) =>
-  QR_TYPE_OPTIONS.find((option) => option.key === key)?.label || 'NFT';
 
 const buildQrUrl = (payload) =>
   `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(String(payload || ''))}`;
@@ -54,19 +27,31 @@ const formatDateOnly = (value) => {
   return date.toISOString().split('T')[0];
 };
 
-const hasAllQrPayloads = (payloads) =>
-  Boolean(payloads?.nft && payloads?.label && payloads?.certificate);
+const getFirstNonEmptyValue = (values) =>
+  values
+    .map((value) => String(value || '').trim())
+    .find((value) => value.length > 0) || '';
+
+const extractCertificatePayload = (itemRow) =>
+  getFirstNonEmptyValue([
+    itemRow?.certificateQrCode,
+    itemRow?.certificateQrPayload,
+    itemRow?.certificateQr,
+    itemRow?.nftQrCode,
+    itemRow?.nftQrPayload,
+    itemRow?.nftQr,
+    itemRow?.productLabelQrCode,
+    itemRow?.labelQrCode,
+    itemRow?.labelQrPayload,
+    itemRow?.productLabelQrPayload,
+  ]);
 
 const createProductItemQrEntry = (itemRow, product, index) => {
   const rawSerial = String(itemRow?.itemSerial || itemRow?.id || '').replace(/^#/, '').trim();
   const fallbackSerial = `${product?.id || 'PROD'}-${String(index + 1).padStart(4, '0')}`;
   const itemSerial = rawSerial || fallbackSerial;
-  const qrPayloads = {
-    nft: String(itemRow?.nftQrCode || '').trim(),
-    label: String(itemRow?.productLabelQrCode || '').trim(),
-    certificate: String(itemRow?.certificateQrCode || '').trim(),
-  };
-  const status = hasAllQrPayloads(qrPayloads) ? 'generated' : 'pending';
+  const certificateQrCode = extractCertificatePayload(itemRow);
+  const status = certificateQrCode ? 'generated' : 'pending';
   const generatedAt = formatDateOnly(itemRow?.mintedAt || itemRow?.createdAt);
 
   return {
@@ -75,19 +60,15 @@ const createProductItemQrEntry = (itemRow, product, index) => {
     collection: product?.collection || '-',
     productId: String(product?.id || '-'),
     itemSerial,
-    qrPayloads,
+    certificateQrCode,
     genDate: status === 'generated' ? generatedAt : '-',
     status,
-    verified: false,
   };
 };
 
 export default function GenerateAllQrCollections() {
   const router = useRouter();
-  const params = useLocalSearchParams();
 
-  const [generationScope, setGenerationScope] = useState('all_products');
-  const isGenerating = false;
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loadError, setLoadError] = useState('');
@@ -97,17 +78,9 @@ export default function GenerateAllQrCollections() {
   const [allProducts, setAllProducts] = useState([]);
   const [allItemEntries, setAllItemEntries] = useState([]);
 
-  const [selectedProductId, setSelectedProductId] = useState('');
-
-  const [qrMetaById, setQrMetaById] = useState({});
-  const [selectedQrTypeById, setSelectedQrTypeById] = useState({});
-
   const [selectedQrId, setSelectedQrId] = useState('');
   const [showQrModal, setShowQrModal] = useState(false);
-  const [showScopeModal, setShowScopeModal] = useState(false);
   const [showListFilterModal, setShowListFilterModal] = useState(false);
-  const [draftScope, setDraftScope] = useState('all_products');
-  const [draftProductId, setDraftProductId] = useState('');
 
   const loadQrSourceData = useCallback(async (showInitialLoader = true) => {
     try {
@@ -151,19 +124,9 @@ export default function GenerateAllQrCollections() {
 
       const uniqueRows = Array.from(uniqueBySerial.values());
       setAllItemEntries(uniqueRows);
-
-      const requestedCollectionId = parseParam(params.collectionId);
-      const preferredProduct =
-        (requestedCollectionId
-          ? mergedProducts.find((product) => String(product.collectionId) === String(requestedCollectionId))
-          : null) || mergedProducts[0];
-
-      const nextProductId = String(preferredProduct?.id || '');
-      setSelectedProductId(nextProductId);
     } catch (error) {
       setAllProducts([]);
       setAllItemEntries([]);
-      setSelectedProductId('');
       setLoadError(error?.message || 'Failed to load QR source data');
     } finally {
       if (showInitialLoader) {
@@ -171,7 +134,7 @@ export default function GenerateAllQrCollections() {
       }
       setIsRefreshing(false);
     }
-  }, [params.collectionId]);
+  }, []);
 
   useEffect(() => {
     loadQrSourceData();
@@ -182,40 +145,21 @@ export default function GenerateAllQrCollections() {
     loadQrSourceData(false);
   }, [loadQrSourceData]);
 
-  const baseQrEntries = useMemo(() => {
-    if (generationScope === 'all_products') {
-      return allItemEntries;
-    }
-
-    return allItemEntries.filter((entry) => String(entry.productId) === String(selectedProductId));
-  }, [generationScope, selectedProductId, allItemEntries]);
+  const baseQrEntries = allItemEntries;
 
   const scopedQrCodes = useMemo(
     () =>
       baseQrEntries.map((entry) => {
-        const meta = qrMetaById[entry.id] || {};
-        const status = entry.status;
-        const selectedQrType = selectedQrTypeById[entry.id] || 'nft';
-        const qrUrls =
-          status === 'generated'
-            ? {
-                nft: buildQrUrl(entry.qrPayloads.nft),
-                label: buildQrUrl(entry.qrPayloads.label),
-                certificate: buildQrUrl(entry.qrPayloads.certificate),
-              }
-            : { nft: '', label: '', certificate: '' };
+        const qrUrl =
+          entry.status === 'generated' ? buildQrUrl(entry.certificateQrCode) : '';
+
         return {
           ...entry,
-          status,
-          genDate: entry.genDate,
-          verified: Boolean(meta.verified),
-          selectedQrType,
-          qrUrl: qrUrls[selectedQrType] || '',
-          activeQrPayload: entry.qrPayloads[selectedQrType],
-          qrUrls,
+          qrUrl,
+          activeQrPayload: entry.certificateQrCode,
         };
       }),
-    [baseQrEntries, qrMetaById, selectedQrTypeById]
+    [baseQrEntries]
   );
 
   const statusFilteredQrCodes =
@@ -247,17 +191,7 @@ export default function GenerateAllQrCollections() {
     }
   }, [allProducts, listProductFilterId]);
 
-  const activeScope = SCOPE_OPTIONS.find((scope) => scope.key === generationScope) || SCOPE_OPTIONS[0];
-  const canRunGeneration = draftScope === 'all_products' || Boolean(draftProductId);
   const hasGeneratedRows = filteredQrCodes.some((row) => row.status === 'generated');
-  const productItemCountMap = useMemo(() => {
-    const map = {};
-    allItemEntries.forEach((entry) => {
-      const key = String(entry.productId);
-      map[key] = (map[key] || 0) + 1;
-    });
-    return map;
-  }, [allItemEntries]);
   const selectedFilterProductLabel =
     listProductFilterId === 'all'
       ? 'All Products'
@@ -274,55 +208,15 @@ export default function GenerateAllQrCollections() {
     }
   }, [showQrModal, modalQr]);
 
-  const openScopeModal = () => {
-    const fallbackProductId = String(allProducts[0]?.id || '');
-    setDraftScope(generationScope);
-    setDraftProductId(selectedProductId || fallbackProductId);
-    setShowScopeModal(true);
-  };
-
-  const handleGenerateForScope = async (targetRows, scopeKey) => {
-    if (targetRows.length === 0) {
-      Alert.alert('No Data', 'There are no product items to generate in this scope.');
-      return;
-    }
-
-    const pendingRows = targetRows.filter((row) => row.status !== 'generated');
-    const scopeLabel = SCOPE_OPTIONS.find((scope) => scope.key === scopeKey)?.label || 'selected scope';
-
-    if (pendingRows.length === 0) {
-      Alert.alert('Already Synced', `All QR payloads in ${scopeLabel} already come from backend.`);
-      return;
-    }
-
-    Alert.alert(
-      'Backend Generation Required',
-      `${pendingRows.length} items in ${scopeLabel} still have no backend QR payloads. Run backend pre-mint first, then refresh this page.`
-    );
-  };
-
-  const handleGenerateSingle = (qr) => {
-    if (qr.status === 'generated') {
-      Alert.alert('Already Synced', 'This item already has backend QR payloads.');
-      return;
-    }
-
-    Alert.alert(
-      'Backend Generation Required',
-      'QR payload is issued by backend pre-mint. Generate it from backend lifecycle first.'
-    );
-  };
-
   const handleDownloadQr = (qr) => {
     if (qr.status !== 'generated') {
       Alert.alert('No QR available', 'This item has no backend QR payload yet.');
       return;
     }
 
-    const qrTypeLabel = getQrTypeLabel(qr.selectedQrType);
     Alert.alert(
       'Download QR Code',
-      `Downloading ${qrTypeLabel} QR for "${qr.itemName}"\nItem Serial: ${qr.itemSerial}`,
+      `Downloading Certificate QR for "${qr.itemName}"\nItem Serial: ${qr.itemSerial}`,
       [{ text: 'OK' }]
     );
   };
@@ -334,27 +228,13 @@ export default function GenerateAllQrCollections() {
     }
 
     try {
-      const qrTypeLabel = getQrTypeLabel(qr.selectedQrType);
       await Share.share({
-        message: `Digital Seal ${qrTypeLabel} QR for ${qr.itemName}\n\nItem Serial: ${qr.itemSerial}\nCollection: ${qr.collection}\nGenerated: ${qr.genDate}\nPayload: ${qr.activeQrPayload}`,
+        message: `Digital Seal Certificate QR for ${qr.itemName}\n\nItem Serial: ${qr.itemSerial}\nCollection: ${qr.collection}\nGenerated: ${qr.genDate}\nPayload: ${qr.activeQrPayload}`,
         title: 'Share QR Code',
       });
     } catch (error) {
       console.error(error);
     }
-  };
-
-  const handleVerifyQr = (qr) => {
-    setQrMetaById((previous) => {
-      const current = previous[qr.id] || {};
-      return {
-        ...previous,
-        [qr.id]: {
-          ...current,
-          verified: !Boolean(current.verified),
-        },
-      };
-    });
   };
 
   const handleShowQr = (qr) => {
@@ -365,13 +245,6 @@ export default function GenerateAllQrCollections() {
 
     setSelectedQrId(qr.id);
     setShowQrModal(true);
-  };
-
-  const handleSelectQrType = (qrId, qrType) => {
-    setSelectedQrTypeById((previous) => ({
-      ...previous,
-      [qrId]: qrType,
-    }));
   };
 
   return (
@@ -392,10 +265,6 @@ export default function GenerateAllQrCollections() {
           <View style={s.statCard}>
             <Text style={s.statValue}>{filteredQrCodes.filter((q) => q.status === 'generated').length}</Text>
             <Text style={s.statLabel}>Generated</Text>
-          </View>
-          <View style={s.statCard}>
-            <Text style={s.statValue}>{filteredQrCodes.filter((q) => q.verified).length}</Text>
-            <Text style={s.statLabel}>Verified</Text>
           </View>
           <View style={s.statCard}>
             <Text style={s.statValue}>{filteredQrCodes.filter((q) => q.status === 'pending').length}</Text>
@@ -432,31 +301,6 @@ export default function GenerateAllQrCollections() {
             <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#111" />
           }
         >
-          <View style={s.section}>
-            <TouchableOpacity
-              style={s.generateAllBtn}
-              disabled={isGenerating}
-              onPress={openScopeModal}
-            >
-              {isGenerating ? (
-                <>
-                  <ActivityIndicator size="small" color="#fff" />
-                  <Text style={s.generateAllBtnText}>Generating...</Text>
-                </>
-              ) : (
-                <>
-                  <Ionicons name="qr-code" size={20} color="#fff" />
-                  <Text style={s.generateAllBtnText}>Generate Items</Text>
-                </>
-              )}
-            </TouchableOpacity>
-            {!isGenerating && (
-              <Text style={s.generateHintText}>
-                Current option: {activeScope.label}. QR payloads are issued by backend pre-mint.
-              </Text>
-            )}
-          </View>
-
           {isLoadingData && (
             <View style={s.loadingWrap}>
               <LoadingPulse label="Loading product items..." />
@@ -513,34 +357,11 @@ export default function GenerateAllQrCollections() {
                             {qr.status === 'generated' ? 'Generated' : 'Pending'}
                           </Text>
                         </View>
-                        {qr.verified && (
-                          <View style={s.verifiedBadge}>
-                            <Ionicons name="checkmark-circle" size={14} color="#4CAF50" />
-                            <Text style={s.verifiedText}>Verified</Text>
-                          </View>
-                        )}
                       </View>
                       <Text style={s.qrDate}>Generated: {qr.genDate}</Text>
-                      {qr.status !== 'generated' && (
-                        <TouchableOpacity style={s.generateRowBtn} onPress={() => handleGenerateSingle(qr)}>
-                          <Ionicons name="qr-code" size={14} color="#fff" />
-                          <Text style={s.generateRowBtnText}>Use Backend</Text>
-                        </TouchableOpacity>
-                      )}
                     </View>
 
                     <View style={s.qrCardActions}>
-                      <TouchableOpacity
-                        style={[s.qrActionBtn, qr.status !== 'generated' && s.qrActionBtnDisabled]}
-                        onPress={() => handleVerifyQr(qr)}
-                        disabled={qr.status !== 'generated'}
-                      >
-                        <Ionicons
-                          name={qr.verified ? 'checkmark-circle' : 'checkmark-circle-outline'}
-                          size={20}
-                          color={qr.status !== 'generated' ? '#bbb' : qr.verified ? '#4CAF50' : '#888'}
-                        />
-                      </TouchableOpacity>
                       <TouchableOpacity
                         style={[s.qrActionBtn, qr.status !== 'generated' && s.qrActionBtnDisabled]}
                         onPress={() => handleDownloadQr(qr)}
@@ -583,10 +404,10 @@ export default function GenerateAllQrCollections() {
           <View style={s.infoCard}>
             <View style={s.infoHeader}>
               <Ionicons name="information-circle" size={20} color="#3498db" />
-              <Text style={s.infoTitle}>About QR Scopes</Text>
+              <Text style={s.infoTitle}>Certificate QR</Text>
             </View>
             <Text style={s.infoText}>
-              QR payloads come from backend pre-mint and are stored per product item. This screen only previews and manages backend-issued QR types (NFT, Label, Certificate).
+              Certificate QR payloads are generated automatically when a collection is created. This screen previews and manages those backend-issued certificate codes.
             </Text>
           </View>
         </ScrollView>
@@ -601,22 +422,6 @@ export default function GenerateAllQrCollections() {
 
               {modalQr && (
                 <>
-                  <View style={s.modalQrTypeRow}>
-                    {QR_TYPE_OPTIONS.map((typeOption) => {
-                      const isActive = modalQr.selectedQrType === typeOption.key;
-                      return (
-                        <TouchableOpacity
-                          key={`modal:${modalQr.id}:${typeOption.key}`}
-                          style={[s.qrTypeChip, isActive && s.qrTypeChipActive]}
-                          onPress={() => handleSelectQrType(modalQr.id, typeOption.key)}
-                        >
-                          <Text style={[s.qrTypeChipText, isActive && s.qrTypeChipTextActive]}>
-                            {typeOption.label}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
                   <Image source={{ uri: modalQr.qrUrl }} style={s.qrModalImage} />
                   <Text style={s.qrModalName}>{modalQr.itemName}</Text>
                   <Text style={s.qrModalCollection}>{modalQr.collection}</Text>
@@ -641,98 +446,6 @@ export default function GenerateAllQrCollections() {
                   </View>
                 </>
               )}
-            </View>
-          </View>
-        </Modal>
-
-        <Modal visible={showScopeModal} transparent animationType="fade" onRequestClose={() => setShowScopeModal(false)}>
-          <TouchableOpacity style={s.backdrop} activeOpacity={1} onPress={() => setShowScopeModal(false)} />
-          <View style={s.modalCenter} pointerEvents="box-none">
-            <View style={s.scopeModalCard}>
-              <Text style={s.scopeModalTitle}>Choose Generation Scope</Text>
-              <Text style={s.scopeModalSubtitle}>Select how QR should be generated before running.</Text>
-
-              <View style={s.scopeOptionList}>
-                {SCOPE_OPTIONS.map((scope) => (
-                  <TouchableOpacity
-                    key={scope.key}
-                    style={[s.scopeOptionCard, draftScope === scope.key && s.scopeOptionCardActive]}
-                    onPress={() => setDraftScope(scope.key)}
-                  >
-                    <View style={[s.scopeIconWrap, draftScope === scope.key && s.scopeIconWrapActive]}>
-                      <Ionicons
-                        name={scope.icon}
-                        size={16}
-                        color={draftScope === scope.key ? '#fff' : '#333'}
-                      />
-                    </View>
-                    <View style={s.scopeTextWrap}>
-                      <Text style={[s.scopeOptionTitle, draftScope === scope.key && s.scopeOptionTitleActive]}>
-                        {scope.label}
-                      </Text>
-                      <Text style={s.scopeOptionDesc}>{scope.description}</Text>
-                    </View>
-                    {draftScope === scope.key && <Ionicons name="checkmark-circle" size={18} color="#111" />}
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {draftScope === 'per_product' && (
-                <View style={s.productPickerWrap}>
-                  <Text style={s.productPickerTitle}>Select Product</Text>
-                  <ScrollView style={s.productPickerList} showsVerticalScrollIndicator={false}>
-                    {allProducts.map((product) => {
-                      const isActive = String(draftProductId) === String(product.id);
-                      const productItems = productItemCountMap[String(product.id)] || 0;
-                      return (
-                        <TouchableOpacity
-                          key={product.id}
-                          style={[s.productPickerOption, isActive && s.productPickerOptionActive]}
-                          onPress={() => setDraftProductId(String(product.id))}
-                        >
-                          <View style={s.productPickerTextWrap}>
-                            <Text style={[s.productPickerName, isActive && s.productPickerNameActive]} numberOfLines={1}>
-                              {product.name}
-                            </Text>
-                            <Text style={s.productPickerMeta} numberOfLines={1}>
-                              {productItems} product items
-                            </Text>
-                          </View>
-                          <View style={[s.productPickerBadge, isActive && s.productPickerBadgeActive]}>
-                            <Text style={[s.productPickerBadgeText, isActive && s.productPickerBadgeTextActive]}>
-                              {productItems}
-                            </Text>
-                          </View>
-                          {isActive && <Ionicons name="checkmark-circle" size={18} color="#111" />}
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </ScrollView>
-                </View>
-              )}
-
-              <View style={s.scopeModalActions}>
-                <TouchableOpacity style={[s.modalActionBtn, s.modalActionBtnSecondary]} onPress={() => setShowScopeModal(false)}>
-                  <Text style={[s.modalActionBtnText, { color: '#111' }]}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[s.modalActionBtn, s.modalActionBtnPrimary, !canRunGeneration && s.modalActionBtnDisabled]}
-                  disabled={!canRunGeneration}
-                  onPress={() => {
-                    const targetRows =
-                      draftScope === 'all_products'
-                        ? allItemEntries
-                        : allItemEntries.filter((entry) => String(entry.productId) === String(draftProductId));
-                    setGenerationScope(draftScope);
-                    setSelectedProductId(draftProductId);
-                    setListProductFilterId(draftScope === 'per_product' ? String(draftProductId) : 'all');
-                    setShowScopeModal(false);
-                    handleGenerateForScope(targetRows, draftScope);
-                  }}
-                >
-                  <Text style={s.modalActionBtnText}>Generate</Text>
-                </TouchableOpacity>
-              </View>
             </View>
           </View>
         </Modal>
@@ -879,58 +592,9 @@ const s = StyleSheet.create({
     maxWidth: 170,
   },
 
-  qrTypeSelectorRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: 6,
-  },
-  modalQrTypeRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 12,
-  },
-  qrTypeChip: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e8e8e8',
-    borderRadius: 16,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  qrTypeChipActive: {
-    backgroundColor: '#111',
-    borderColor: '#111',
-  },
-  qrTypeChipText: {
-    fontSize: 11,
-    color: '#444',
-    fontWeight: '600',
-  },
-  qrTypeChipTextActive: {
-    color: '#fff',
-  },
-
   content: { flex: 1, paddingHorizontal: 16 },
   section: { marginVertical: 14 },
   sectionTitle: { fontSize: 16, fontWeight: '800', color: '#111', marginBottom: 12 },
-
-  generateAllBtn: {
-    backgroundColor: '#111',
-    borderRadius: 14,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  generateAllBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
-  generateHintText: {
-    marginTop: 10,
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-  },
 
   loadingWrap: {
     alignItems: 'center',
@@ -1003,29 +667,11 @@ const s = StyleSheet.create({
   statusBadgePending: { backgroundColor: '#ffe' },
   statusBadgeText: { fontSize: 11, fontWeight: '600', color: '#cc0000' },
   statusBadgeTextGenerated: { color: '#4CAF50' },
-  verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  verifiedText: { fontSize: 11, color: '#4CAF50', fontWeight: '600' },
   qrDate: { fontSize: 11, color: '#aaa' },
 
   qrCardActions: { flexDirection: 'row', paddingHorizontal: 12, gap: 8 },
   qrActionBtn: { padding: 8 },
   qrActionBtnDisabled: { opacity: 0.45 },
-  generateRowBtn: {
-    marginTop: 8,
-    alignSelf: 'flex-start',
-    backgroundColor: '#111',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  generateRowBtnText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '700',
-  },
 
   batchActionRow: { flexDirection: 'row', gap: 8 },
   batchActionBtn: {
@@ -1065,32 +711,6 @@ const s = StyleSheet.create({
     alignItems: 'center',
     width: '90%',
     maxWidth: 320,
-  },
-  scopeModalCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    width: '92%',
-    maxWidth: 420,
-    borderWidth: 1,
-    borderColor: '#e8e8e8',
-  },
-  scopeModalTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#111',
-    marginBottom: 6,
-  },
-  scopeModalSubtitle: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 10,
-  },
-  scopeModalActions: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 12,
   },
   listFilterModalCard: {
     backgroundColor: '#fff',
@@ -1138,121 +758,6 @@ const s = StyleSheet.create({
     color: '#111',
     fontWeight: '700',
   },
-  scopeOptionList: {
-    gap: 8,
-    marginBottom: 6,
-  },
-  scopeOptionCard: {
-    borderWidth: 1,
-    borderColor: '#e8e8e8',
-    borderRadius: 12,
-    backgroundColor: '#fff',
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    gap: 10,
-  },
-  scopeOptionCardActive: {
-    borderColor: '#111',
-    backgroundColor: '#f7f7f7',
-  },
-  scopeIconWrap: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#ececec',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scopeIconWrapActive: {
-    backgroundColor: '#111',
-  },
-  scopeTextWrap: {
-    flex: 1,
-  },
-  scopeOptionTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#111',
-  },
-  scopeOptionTitleActive: {
-    color: '#111',
-  },
-  scopeOptionDesc: {
-    marginTop: 2,
-    fontSize: 11,
-    color: '#666',
-    lineHeight: 16,
-  },
-  productPickerWrap: {
-    marginTop: 2,
-    borderWidth: 1,
-    borderColor: '#ececec',
-    borderRadius: 12,
-    backgroundColor: '#fafafa',
-    padding: 10,
-  },
-  productPickerTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#444',
-    marginBottom: 8,
-  },
-  productPickerList: {
-    maxHeight: 180,
-  },
-  productPickerOption: {
-    borderWidth: 1,
-    borderColor: '#e8e8e8',
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    marginBottom: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  productPickerOptionActive: {
-    borderColor: '#111',
-    backgroundColor: '#f5f5f5',
-  },
-  productPickerTextWrap: {
-    flex: 1,
-  },
-  productPickerName: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#222',
-  },
-  productPickerNameActive: {
-    color: '#111',
-  },
-  productPickerMeta: {
-    marginTop: 2,
-    fontSize: 11,
-    color: '#777',
-  },
-  productPickerBadge: {
-    minWidth: 28,
-    height: 24,
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    backgroundColor: '#ededed',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  productPickerBadgeActive: {
-    backgroundColor: '#111',
-  },
-  productPickerBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#555',
-  },
-  productPickerBadgeTextActive: {
-    color: '#fff',
-  },
   closeBtn: { position: 'absolute', top: 12, right: 12, padding: 8 },
   qrModalImage: { width: 240, height: 240, borderRadius: 12, marginBottom: 16 },
   qrModalName: { fontSize: 16, fontWeight: '800', color: '#111', marginBottom: 4 },
@@ -1270,7 +775,6 @@ const s = StyleSheet.create({
     gap: 6,
   },
   modalActionBtnPrimary: { backgroundColor: '#111' },
-  modalActionBtnDisabled: { opacity: 0.45 },
   modalActionBtnSecondary: { backgroundColor: '#f0f0f0' },
   modalActionBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
 });

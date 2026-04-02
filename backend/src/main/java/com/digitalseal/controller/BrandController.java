@@ -9,14 +9,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -50,12 +48,10 @@ public class BrandController {
                     description = "Brand name or wallet already exists"
             )
     })
-    @SecurityRequirement(name = "bearerAuth")
     @PostMapping
     public ResponseEntity<ApiResponse<BrandResponse>> createBrand(
-            Authentication authentication,
             @Valid @RequestBody CreateBrandRequest request) {
-        Long userId = Long.parseLong(authentication.getName());
+        Long userId = null;
         log.info("Brand registration request from user ID: {}", userId);
         BrandResponse response = brandService.createBrand(userId, request);
         return ResponseEntity
@@ -78,10 +74,9 @@ public class BrandController {
                     description = "Unauthorized"
             )
     })
-    @SecurityRequirement(name = "bearerAuth")
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse<List<BrandResponse>>> getMyBrands(Authentication authentication) {
-        Long userId = Long.parseLong(authentication.getName());
+        public ResponseEntity<ApiResponse<List<BrandResponse>>> getMyBrands() {
+                Long userId = null;
         List<BrandResponse> brands = brandService.getMyBrands(userId);
         return ResponseEntity.ok(ApiResponse.success(brands, "Brands retrieved successfully"));
     }
@@ -130,13 +125,11 @@ public class BrandController {
                     description = "Brand not found"
             )
     })
-    @SecurityRequirement(name = "bearerAuth")
     @PutMapping("/{brandId}")
     public ResponseEntity<ApiResponse<BrandResponse>> updateBrand(
-            Authentication authentication,
             @PathVariable Long brandId,
             @Valid @RequestBody UpdateBrandRequest request) {
-        Long userId = Long.parseLong(authentication.getName());
+                Long userId = null;
         log.info("Brand update request for brand ID: {} from user ID: {}", brandId, userId);
         BrandResponse response = brandService.updateBrand(userId, brandId, request);
         return ResponseEntity.ok(ApiResponse.success(response, "Brand updated successfully"));
@@ -160,12 +153,10 @@ public class BrandController {
                     description = "Brand not found"
             )
     })
-    @SecurityRequirement(name = "bearerAuth")
     @DeleteMapping("/{brandId}")
     public ResponseEntity<ApiResponse<Void>> deleteBrand(
-            Authentication authentication,
             @PathVariable Long brandId) {
-        Long userId = Long.parseLong(authentication.getName());
+                Long userId = null;
         log.info("Brand delete request for brand ID: {} from user ID: {}", brandId, userId);
         brandService.deleteBrand(userId, brandId);
         return ResponseEntity.ok(ApiResponse.success(null, "Brand deleted successfully"));

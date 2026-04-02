@@ -7,7 +7,6 @@ import com.digitalseal.model.entity.LogLevel;
 import com.digitalseal.service.PlatformLogService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +15,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -27,7 +25,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 @CrossOrigin(origins = "*")
-@SecurityRequirement(name = "bearerAuth")
 @Tag(name = "Platform Logs", description = "Activity log and monitoring endpoints (BRAND / OWNER role required)")
 public class PlatformLogController {
 
@@ -41,12 +38,11 @@ public class PlatformLogController {
                       "Supports filtering by level (INFO/WARN/ERROR), category, userId, success flag, " +
                       "date range, and a free-text search across action, details, and userEmail fields.")
     @GetMapping
-    @PreAuthorize("hasAnyRole('BRAND', 'OWNER')")
     public ResponseEntity<ApiResponse<Page<PlatformLogResponse>>> getLogs(
             @Parameter(description = "Filter by severity: INFO | WARN | ERROR")
             @RequestParam(required = false) LogLevel level,
 
-            @Parameter(description = "Filter by category: AUTH | ORDER | CLAIM | BLOCKCHAIN | PRODUCT | BRAND | USER | WALLET | SYSTEM")
+            @Parameter(description = "Filter by category: AUTH | ORDER | CLAIM | PRODUCT | BRAND | USER | SYSTEM (plus legacy categories)")
             @RequestParam(required = false) LogCategory category,
 
             @Parameter(description = "Filter by user ID")
@@ -83,7 +79,6 @@ public class PlatformLogController {
 
     @Operation(summary = "Get a single log entry by ID")
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('BRAND', 'OWNER')")
     public ResponseEntity<ApiResponse<PlatformLogResponse>> getLog(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success(platformLogService.findById(id), "Log entry retrieved"));
     }
@@ -95,7 +90,6 @@ public class PlatformLogController {
         description = "Dashboard summary: event counts by level and category, top error actions, " +
                       "and the latest 20 error entries — all within the last N hours (default 24).")
     @GetMapping("/stats")
-    @PreAuthorize("hasAnyRole('BRAND', 'OWNER')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getStats(
             @Parameter(description = "Rolling window in hours (default 24)")
             @RequestParam(defaultValue = "24") int hours) {
@@ -108,7 +102,6 @@ public class PlatformLogController {
 
     @Operation(summary = "Recent errors (shortcut)", description = "Latest 20 ERROR-level log entries.")
     @GetMapping("/errors")
-    @PreAuthorize("hasAnyRole('BRAND', 'OWNER')")
     public ResponseEntity<ApiResponse<Page<PlatformLogResponse>>> getErrors(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {

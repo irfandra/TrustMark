@@ -102,13 +102,9 @@ public class PlatformLoggingAspect {
     private LogCategory categoryForClass(String name) {
         if (name.startsWith("Auth"))        return LogCategory.AUTH;
         if (name.startsWith("Order"))       return LogCategory.ORDER;
-        if (name.startsWith("Claim"))       return LogCategory.CLAIM;
-        if (name.startsWith("Blockchain"))  return LogCategory.BLOCKCHAIN;
         if (name.startsWith("Product"))     return LogCategory.PRODUCT;
         if (name.startsWith("Brand"))       return LogCategory.BRAND;
         if (name.startsWith("User"))        return LogCategory.USER;
-        if (name.startsWith("Marketplace")) return LogCategory.PRODUCT;
-        if (name.startsWith("Verify"))      return LogCategory.BLOCKCHAIN;
         if (name.startsWith("PlatformLog")) return LogCategory.SYSTEM;
         return LogCategory.SYSTEM;
     }

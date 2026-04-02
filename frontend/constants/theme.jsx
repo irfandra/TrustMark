@@ -1,48 +1,44 @@
 import { Platform } from 'react-native';
 
-const tintColorLight = '#000000';
-const tintColorDark = '#fff';
+const tintColorLight = '#D95F47';
+const tintColorDark = '#F2B9A7';
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
+    text: '#1E2C3A',
+    background: '#F6F1E8',
     tint: tintColorLight,
-    icon: '#e6e6e6',
-    tabIconDefault: '#a8a8a8',
+    icon: '#9E8F7B',
+    tabIconDefault: '#6D7888',
     tabIconSelected: tintColorLight,
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
+    text: '#F3EEE6',
+    background: '#101A25',
     tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
+    icon: '#AE9C8A',
+    tabIconDefault: '#8E9CAD',
     tabIconSelected: tintColorDark,
   },
 };
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
+    sans: 'Avenir Next',
+    serif: 'Georgia',
+    rounded: 'Avenir Next Condensed',
+    mono: 'Menlo',
   },
   default: {
-    sans: 'normal',
+    sans: 'sans-serif',
     serif: 'serif',
-    rounded: 'normal',
+    rounded: 'sans-serif-condensed',
     mono: 'monospace',
   },
   web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+    sans: "'Avenir Next', 'Trebuchet MS', 'Gill Sans', sans-serif",
+    serif: "'Iowan Old Style', Georgia, 'Times New Roman', serif",
+    rounded: "'Avenir Next Condensed', 'Trebuchet MS', sans-serif",
+    mono: "Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
 });

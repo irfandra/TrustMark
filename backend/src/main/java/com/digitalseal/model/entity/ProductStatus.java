@@ -9,7 +9,7 @@ package com.digitalseal.model.entity;
 public enum ProductStatus {
     DRAFT,          // Created, fully editable — not visible to buyers
     PUBLISHED,      // Finalized details, partially editable (price, quantity) — visible to buyers
-    PREMINTED,      // NFT seal tokens minted on-chain — immutable from here on
+    PREMINTED,      // Item authentication payloads generated — immutable from here on
     LISTED,         // Available for purchase on marketplace
     SOLD_OUT,       // All items sold/reserved
     COMPLETED,      // All items delivered and ownership transferred

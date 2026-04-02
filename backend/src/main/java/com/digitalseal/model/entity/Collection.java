@@ -57,9 +57,6 @@ public class Collection {
     @Column(name = "tag", length = 50)
     private String tag;
 
-    @Column(name = "sales_end_at")
-    private LocalDateTime salesEndAt;
-
     @Column(name = "tag_color", length = 20)
     private String tagColor;
 

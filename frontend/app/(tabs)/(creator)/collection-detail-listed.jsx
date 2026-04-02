@@ -1,12 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   RefreshControl,
-  SafeAreaView,
   ScrollView,
   View,
   Text,
   Image,
-  ImageBackground,
   StyleSheet,
   TouchableOpacity,
   TextInput,
@@ -14,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { collectionService } from '@/services/collectionService';
 import LoadingPulse from '@/components/shared/loading-pulse';
 
@@ -22,9 +21,26 @@ const isTablet = SW >= 768;
 
 const parseParam = (value) => (Array.isArray(value) ? value[0] : value);
 
-const PolIcon = ({ size = 18 }) => (
+const getStockBadgeStyle = (label) => {
+  const normalized = String(label || '').trim().toLowerCase();
+  if (normalized === 'low stock') {
+    return { backgroundColor: '#D95F47', color: '#FFF9F0' };
+  }
+  if (normalized === 'medium stock') {
+    return { backgroundColor: '#B6842D', color: '#FFF9F0' };
+  }
+  if (normalized === 'out of stock') {
+    return { backgroundColor: '#6B5A4B', color: '#FFF9F0' };
+  }
+  if (normalized === 'no stock') {
+    return { backgroundColor: '#9E8F7C', color: '#FFF9F0' };
+  }
+  return { backgroundColor: '#2D7A4E', color: '#FFF9F0' };
+};
+
+const UsdIcon = ({ size = 18 }) => (
   <View style={[s.polIcon, { width: size, height: size, borderRadius: size / 2 }]}>
-    <Text style={[s.polIconText, { fontSize: size * 0.5 }]}>P</Text>
+    <Text style={[s.polIconText, { fontSize: size * 0.5 }]}>$</Text>
   </View>
 );
 
@@ -35,7 +51,7 @@ const SectionHeader = ({ title, count, onFilter }) => (
       {count ? <Text style={s.sectionHeaderCount}>  {count}</Text> : null}
     </View>
     <TouchableOpacity style={s.filterBtn} onPress={onFilter}>
-      <Ionicons name="menu" size={18} color="#222" />
+      <Ionicons name="options-outline" size={16} color="#1E2C3A" />
       <Text style={s.filterText}>Filter</Text>
     </TouchableOpacity>
   </View>
@@ -43,18 +59,18 @@ const SectionHeader = ({ title, count, onFilter }) => (
 
 const SearchBar = ({ value, onChange, placeholder = 'Search...' }) => (
   <View style={s.searchWrap}>
-    <Ionicons name="search" size={18} color="#aaa" style={{ marginRight: 8 }} />
+    <Ionicons name="search" size={18} color="#7B6A58" style={{ marginRight: 8 }} />
     <TextInput
       style={s.searchInput}
       placeholder={placeholder}
-      placeholderTextColor="#aaa"
+      placeholderTextColor="#9E8F7C"
       value={value}
       onChangeText={onChange}
     />
   </View>
 );
 
-const DataTable = ({ headers, rows, renderRow }) => (
+const DataTable = ({ headers, rows, renderRow, maxHeight }) => (
   <View style={s.table}>
     <View style={[s.tableRow, { marginBottom: 4 }]}>
       {headers.map((h, i) => (
@@ -68,11 +84,25 @@ const DataTable = ({ headers, rows, renderRow }) => (
         </Text>
       ))}
     </View>
-    {rows.map((row, idx) => (
-      <View key={idx} style={[s.tableRow, idx < rows.length - 1 && s.tableRowCard]}>
-        {renderRow(row)}
-      </View>
-    ))}
+    {maxHeight ? (
+      <ScrollView
+        style={{ maxHeight }}
+        nestedScrollEnabled
+        showsVerticalScrollIndicator
+      >
+        {rows.map((row, idx) => (
+          <View key={idx} style={[s.tableRow, idx < rows.length - 1 && s.tableRowCard]}>
+            {renderRow(row)}
+          </View>
+        ))}
+      </ScrollView>
+    ) : (
+      rows.map((row, idx) => (
+        <View key={idx} style={[s.tableRow, idx < rows.length - 1 && s.tableRowCard]}>
+          {renderRow(row)}
+        </View>
+      ))
+    )}
   </View>
 );
 
@@ -119,7 +149,7 @@ export default function CollectionDetailListed() {
       setCatalogItems([]);
       setActivityRows([]);
       setOwnerRows([]);
-      setLoadError(error?.message || 'Failed to load listed products');
+      setLoadError(error?.message || 'Failed to load active products');
     } finally {
       if (showInitialLoader) {
         setIsLoading(false);
@@ -143,11 +173,13 @@ export default function CollectionDetailListed() {
   const title = parseParam(params.title) || 'Birkin Collections';
   const subtitle = parseParam(params.subtitle) || 'Luxury Bags';
   const endDate = parseParam(params.endDate) || 'Ends in 14/04/2026  23:59';
-  const status = parseParam(params.status) || 'Listed';
-  const isListedStatus = String(status).trim().toLowerCase() === 'listed';
-  const tag = parseParam(params.tag) || 'Rare';
-  const tagColor = parseParam(params.tagColor) || '#111';
-  const tagTextColor = parseParam(params.tagTextColor) || '#fff';
+  const status = parseParam(params.status) || 'Active';
+  const normalizedStatus = String(status).trim().toLowerCase();
+  const isActiveStatus = normalizedStatus === 'active' || normalizedStatus === 'listed';
+  const tag = parseParam(params.tag) || 'In Stock';
+  const stockBadgeStyle = getStockBadgeStyle(tag);
+  const tagColor = parseParam(params.tagColor) || stockBadgeStyle.backgroundColor;
+  const tagTextColor = parseParam(params.tagTextColor) || stockBadgeStyle.color;
 
   const totalItems = useMemo(() => {
     const fromParams = parseParam(params.items) || parseParam(params.itemsCount);
@@ -160,14 +192,15 @@ export default function CollectionDetailListed() {
     return total.toLocaleString('en-US');
   }, [params.items, params.itemsCount, catalogItems]);
 
-  const soldItems = useMemo(() => {
-    const sold = catalogItems.reduce((sum, item) => {
+  const stockLeftItems = useMemo(() => {
+    const stockLeft = catalogItems.reduce((sum, item) => {
       const total = Number(item.total || 0);
       const available = Number(item.available || 0);
-      return sum + Math.max(total - available, 0);
+      const normalizedAvailable = Math.max(Math.min(available, total), 0);
+      return sum + normalizedAvailable;
     }, 0);
 
-    return sold.toLocaleString('en-US');
+    return stockLeft.toLocaleString('en-US');
   }, [catalogItems]);
 
   const filtered = catalogItems.filter((item) => {
@@ -185,7 +218,7 @@ export default function CollectionDetailListed() {
     }
 
     return activityRows.filter((row) =>
-      [row.event, row.item, row.price, row.from, row.to]
+      [row.itemId, row.productName, row.status]
         .some((value) => String(value || '').toLowerCase().includes(keyword))
     );
   }, [activityRows, search]);
@@ -214,6 +247,7 @@ export default function CollectionDetailListed() {
         total: item.total,
         priceAmount: item.priceAmount,
         priceUsd: item.priceUsd,
+        currency: item.currency,
         image: encodeURIComponent(item.image),
       },
     });
@@ -225,7 +259,7 @@ export default function CollectionDetailListed() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 20 }}
           refreshControl={
-            <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#111" />
+            <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#1E2C3A" />
           }
         >
           <View style={s.heroWrap}>
@@ -254,7 +288,7 @@ export default function CollectionDetailListed() {
           </View>
 
           <View style={s.statsRow}>
-            {[[ 'Total Items', totalItems ], [ 'Sold', soldItems ]].map(([label, val]) => (
+            {[[ 'Total Produced', totalItems ], [ 'Stock Left', stockLeftItems ]].map(([label, val]) => (
               <View key={label} style={s.statCard}>
                 <Text style={s.statLabel}>{label}</Text>
                 <Text style={s.statValue}>{val}</Text>
@@ -265,7 +299,7 @@ export default function CollectionDetailListed() {
           <View style={s.section}>
             <Text style={s.sectionTitle}>About</Text>
             <Text style={s.bodyText}>
-              This listed collection view is connected to backend data and styled to the requested design.
+              This active collection view is connected to backend data and styled to the requested design.
             </Text>
           </View>
 
@@ -283,12 +317,12 @@ export default function CollectionDetailListed() {
 
           {activeTab === 'Catalog' && (
             <>
-              <SectionHeader title="Catalog" count={`${filtered.length}/ ${catalogItems.length || 0}`} />
-              <SearchBar value={search} onChange={setSearch} placeholder="Search Catalog" />
+              <SectionHeader title="Catalog Library" count={`${filtered.length} of ${catalogItems.length || 0}`} />
+              <SearchBar value={search} onChange={setSearch} placeholder="Search catalog items" />
 
               {isLoading && (
                 <View style={s.loadingWrap}>
-                  <LoadingPulse label="Loading listed products..." />
+                  <LoadingPulse label="Loading active products..." />
                 </View>
               )}
 
@@ -299,29 +333,47 @@ export default function CollectionDetailListed() {
               )}
 
               {!isLoading && !loadError && (
-                <View style={s.grid}>
-                  {filtered.map((item) => (
-                    <TouchableOpacity key={item.id} style={s.card} activeOpacity={0.85} onPress={() => handleCardPress(item)}>
-                      <ImageBackground source={{ uri: item.image }} style={s.cardBg} imageStyle={s.cardBgImg}>
-                        <View style={s.cardOverlay} />
-                        <View style={s.cardContent}>
-                          <View style={s.cardBrandRow}>
-                            <View style={s.brandCircle}><Text style={s.brandCircleText}>H</Text></View>
-                            <Text style={s.cardBrand}>{item.brand}</Text>
+                <View style={s.catalogList}>
+                  {filtered.length === 0 ? (
+                    <View style={s.emptyCatalogWrap}>
+                      <Text style={s.emptyCatalogText}>No catalog items match your search.</Text>
+                    </View>
+                  ) : (
+                    filtered.map((item) => (
+                      <TouchableOpacity key={item.id} style={s.card} activeOpacity={0.9} onPress={() => handleCardPress(item)}>
+                        <Image source={{ uri: item.image }} style={s.cardThumb} resizeMode="cover" />
+
+                        <View style={s.cardBody}>
+                          <View style={s.cardTopRow}>
+                            <Text style={s.cardName} numberOfLines={1}>{item.name}</Text>
+                            <View style={s.chevronWrap}>
+                              <Ionicons name="chevron-forward" size={14} color="#1E2C3A" />
+                            </View>
                           </View>
-                          <Text style={s.cardName}>{item.name}</Text>
-                          <Text style={s.cardCollection}>{item.collection}</Text>
-                          <Text style={s.cardAvailable}>{item.available.toLocaleString()} of {item.total.toLocaleString()} items</Text>
+
+                          <Text style={s.cardCollection} numberOfLines={1}>{item.collection}</Text>
+
+                          <View style={s.metaRow}>
+                            <View style={s.metaPill}>
+                              <Text style={s.metaPillText}>{item.brand}</Text>
+                            </View>
+                            <View style={s.metaPill}>
+                              <Text style={s.metaPillText}>
+                                {Number(item.available || 0).toLocaleString()} / {Number(item.total || 0).toLocaleString()} Available
+                              </Text>
+                            </View>
+                          </View>
+
                           <View style={s.cardPriceRow}>
-                            <PolIcon size={16} />
-                            <Text style={s.cardPriceToken}>POL</Text>
+                            <UsdIcon size={16} />
+                            <Text style={s.cardPriceToken}>{item.currency || 'USD'}</Text>
                             <Text style={s.cardPriceAmt}>{item.priceAmount}</Text>
                             {!!item.priceUsd && <Text style={s.cardPriceUsd}>{item.priceUsd}</Text>}
                           </View>
                         </View>
-                      </ImageBackground>
-                    </TouchableOpacity>
-                  ))}
+                      </TouchableOpacity>
+                    ))
+                  )}
                 </View>
               )}
             </>
@@ -329,31 +381,25 @@ export default function CollectionDetailListed() {
 
           {activeTab === 'Activity' && (
             <>
-              <SectionHeader title="Activity" count={`${filteredActivity.length}/ ${activityRows.length || 0}`} />
-              <SearchBar value={search} onChange={setSearch} placeholder="Search Activity" />
+              <SectionHeader title="Item Status" count={`${filteredActivity.length}/ ${activityRows.length || 0}`} />
+              <SearchBar value={search} onChange={setSearch} placeholder="Search Item Status" />
               <View style={s.tableSection}>
                 <DataTable
                   headers={[
-                    { label: 'Event' },
-                    { label: 'Items' },
-                    { label: 'Price' },
-                    { label: 'From' },
-                    { label: 'To' },
+                    { label: 'Item ID', flex: 1.2 },
+                    { label: 'Product', flex: 1.6 },
+                    { label: 'Status', flex: 1.2 },
                   ]}
+                  maxHeight={240}
                   rows={filteredActivity}
                   renderRow={(row) => [
-                    <Text key="e" numberOfLines={1} ellipsizeMode="tail" style={[s.tableCell, { flex: 1, fontSize: 12 }]}>{row.event}</Text>,
-                    <Text key="i" numberOfLines={1} ellipsizeMode="tail" style={[s.tableCell, { flex: 1, fontSize: 12 }]}>{row.item}</Text>,
-                    <View key="p" style={{ flex: 1, flexDirection: 'row', alignItems: 'center', overflow: 'hidden' }}>
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#333' }}>POL </Text>
-                      <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontSize: 11, flex: 1, color: '#333' }}>{row.price}</Text>
-                    </View>,
-                    <Text key="f" numberOfLines={1} ellipsizeMode="tail" style={[s.tableCell, { flex: 1, fontSize: 11 }]}>{row.from}</Text>,
-                    <Text key="t" numberOfLines={1} ellipsizeMode="tail" style={[s.tableCell, { flex: 1, fontSize: 11 }]}>{row.to}</Text>,
+                    <Text key="i" numberOfLines={1} ellipsizeMode="tail" style={[s.tableCell, { flex: 1.2, fontSize: 12 }]}>{row.itemId}</Text>,
+                    <Text key="p" numberOfLines={1} ellipsizeMode="tail" style={[s.tableCell, { flex: 1.6, fontSize: 12 }]}>{row.productName || '-'}</Text>,
+                    <Text key="s" numberOfLines={1} ellipsizeMode="tail" style={[s.tableCell, { flex: 1.2, fontSize: 12 }]}>{row.status}</Text>,
                   ]}
                 />
                 {!isLoading && filteredActivity.length === 0 && (
-                  <Text style={s.emptyTableText}>No transactions recorded yet.</Text>
+                  <Text style={s.emptyTableText}>No item status recorded yet.</Text>
                 )}
               </View>
             </>
@@ -375,8 +421,8 @@ export default function CollectionDetailListed() {
                     <Text key="id" numberOfLines={1} ellipsizeMode="tail" style={[s.tableCell, { flex: 1.2 }]}>{row.id}</Text>,
                     <Text key="ed" numberOfLines={1} ellipsizeMode="tail" style={[s.tableCell, { flex: 1.5 }]}>{row.edition}</Text>,
                     <View key="pr" style={{ flex: 1.8, flexDirection: 'row', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
-                      <PolIcon size={16} />
-                      <Text style={s.tablePriceLabel}>POL</Text>
+                      <UsdIcon size={16} />
+                      <Text style={s.tablePriceLabel}>USD</Text>
                       <Text numberOfLines={1} ellipsizeMode="tail" style={[s.tableCell, { flex: 1 }]}>{row.price}</Text>
                     </View>,
                   ]}
@@ -389,7 +435,7 @@ export default function CollectionDetailListed() {
           )}
         </ScrollView>
 
-        {activeTab === 'Catalog' && !isListedStatus && (
+        {activeTab === 'Catalog' && !isActiveStatus && (
           <View style={s.footer}>
             <TouchableOpacity
               style={s.mintBtn}
@@ -399,14 +445,15 @@ export default function CollectionDetailListed() {
             </TouchableOpacity>
           </View>
         )}
+
       </View>
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#fff' },
-  container: { flex: 1 },
+  safe: { flex: 1, backgroundColor: '#F6F1E8' },
+  container: { flex: 1, backgroundColor: '#F6F1E8' },
 
   heroWrap: { width: '100%', height: 280, zIndex: 1, overflow: 'visible' },
   heroOverlay: {
@@ -460,39 +507,42 @@ const s = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFF9F0',
     borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E4D7C5',
     paddingVertical: 16,
     paddingHorizontal: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowColor: '#12253A',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
     elevation: 5,
   },
-  statLabel: { fontSize: 14, color: '#333', fontWeight: '600' },
-  statValue: { fontSize: 18, fontWeight: '800', color: '#111' },
+  statLabel: { fontSize: 14, color: '#6F5E4C', fontWeight: '700' },
+  statValue: { fontSize: 18, fontWeight: '800', color: '#1E2C3A' },
 
   section: { paddingHorizontal: 16, marginTop: 20 },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: '#111', marginBottom: 8 },
-  bodyText: { fontSize: 15, color: '#333', lineHeight: 23 },
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: '#1E2C3A', marginBottom: 8 },
+  bodyText: { fontSize: 15, color: '#6F5E4C', lineHeight: 23 },
 
   tabs: { flexDirection: 'row', marginTop: 24, marginBottom: 4, paddingHorizontal: 10 },
   tabBtn: {
     flex: 1,
     paddingVertical: 11,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#D6C8B5',
     borderRadius: 20,
     alignItems: 'center',
     marginHorizontal: 4,
+    backgroundColor: '#FFF9F0',
   },
-  tabBtnActive: { backgroundColor: '#000', borderColor: '#000' },
-  tabText: { fontSize: isTablet ? 17 : 15, color: '#333' },
-  tabTextActive: { color: '#fff', fontWeight: '600' },
+  tabBtnActive: { backgroundColor: '#1E2C3A', borderColor: '#1E2C3A' },
+  tabText: { fontSize: isTablet ? 17 : 15, color: '#5D6674' },
+  tabTextActive: { color: '#FFF9F0', fontWeight: '700' },
 
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -502,34 +552,34 @@ const s = StyleSheet.create({
     marginTop: 20,
     marginBottom: 12,
   },
-  sectionHeaderTitle: { fontSize: 26, fontWeight: '900', color: '#111' },
-  sectionHeaderCount: { fontSize: 14, color: '#888' },
+  sectionHeaderTitle: { fontSize: 28, fontWeight: '900', color: '#1E2C3A' },
+  sectionHeaderCount: { fontSize: 13, color: '#8A7C6A', fontWeight: '700' },
   filterBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#ccc',
-    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#D6C8B5',
+    borderRadius: 999,
     paddingHorizontal: 14,
-    paddingVertical: 9,
+    paddingVertical: 8,
     gap: 6,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFF9F0',
   },
-  filterText: { fontSize: 14, color: '#222', fontWeight: '500' },
+  filterText: { fontSize: 13, color: '#1E2C3A', fontWeight: '700' },
 
   searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#FFF9F0',
     borderRadius: 14,
     marginHorizontal: 16,
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: '#E4D7C5',
     marginBottom: 14,
   },
-  searchInput: { flex: 1, fontSize: 15, color: '#333' },
+  searchInput: { flex: 1, fontSize: 15, color: '#3D4D61' },
 
   loadingWrap: {
     alignItems: 'center',
@@ -546,34 +596,95 @@ const s = StyleSheet.create({
   },
   errorText: { fontSize: 12, color: '#b91c1c', textAlign: 'center' },
 
-  grid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, gap: 12 },
-  card: { width: '47%', borderRadius: 18, overflow: 'hidden', height: 200 },
-  cardBg: { flex: 1, justifyContent: 'flex-end' },
-  cardBgImg: { borderRadius: 18 },
-  cardOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.40)',
+  catalogList: {
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  emptyCatalogWrap: {
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E4D7C5',
+    backgroundColor: '#FFF9F0',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+  },
+  emptyCatalogText: {
+    textAlign: 'center',
+    color: '#8A7C6A',
+    fontSize: 13,
+  },
+  card: {
+    flexDirection: 'row',
+    backgroundColor: '#FFF9F0',
     borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E4D7C5',
+    overflow: 'hidden',
+    shadowColor: '#12253A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 4,
   },
-  cardContent: { padding: 10 },
-  cardBrandRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 },
-  brandCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#e87722',
-    justifyContent: 'center',
+  cardThumb: {
+    width: 118,
+    minHeight: 132,
+  },
+  cardBody: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 7,
+  },
+  cardTopRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
   },
-  brandCircleText: { color: '#fff', fontSize: 9, fontWeight: '800' },
-  cardBrand: { color: '#fff', fontSize: 12, fontWeight: '600' },
-  cardName: { color: '#fff', fontSize: 14, fontWeight: '800', marginBottom: 1 },
-  cardCollection: { color: '#ddd', fontSize: 11, marginBottom: 1 },
-  cardAvailable: { color: '#ccc', fontSize: 10, fontStyle: 'italic', marginBottom: 6 },
-  cardPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  cardPriceToken: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  cardPriceAmt: { color: '#fff', fontSize: 11, fontWeight: '600' },
-  cardPriceUsd: { color: '#bbb', fontSize: 10, textDecorationLine: 'line-through' },
+  chevronWrap: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: '#D6C8B5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF3E2',
+  },
+  cardName: {
+    color: '#1E2C3A',
+    fontSize: 15,
+    fontWeight: '800',
+    flex: 1,
+  },
+  cardCollection: {
+    color: '#6F5E4C',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  metaPill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#E4D7C5',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    backgroundColor: '#F8EFE2',
+  },
+  metaPillText: {
+    color: '#6B5A4B',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  cardPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 1 },
+  cardPriceToken: { color: '#3D4D61', fontSize: 11, fontWeight: '800' },
+  cardPriceAmt: { color: '#1E2C3A', fontSize: 12, fontWeight: '800' },
+  cardPriceUsd: { color: '#8A7C6A', fontSize: 10, textDecorationLine: 'line-through' },
 
   tableSection: { paddingHorizontal: 16, marginTop: 4 },
   table: { backgroundColor: '#f2f2f2', borderRadius: 14, paddingHorizontal: 8, paddingVertical: 8 },
@@ -599,7 +710,7 @@ const s = StyleSheet.create({
   tablePriceLabel: { fontSize: 13, fontWeight: '700', color: '#111' },
   emptyTableText: { textAlign: 'center', color: '#666', fontSize: 13, marginTop: 10, marginBottom: 2 },
 
-  polIcon: { backgroundColor: '#7b5ea7', justifyContent: 'center', alignItems: 'center' },
+  polIcon: { backgroundColor: '#D95F47', justifyContent: 'center', alignItems: 'center' },
   polIconText: { color: '#fff', fontWeight: '700' },
 
   footer: {
@@ -607,16 +718,17 @@ const s = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: '#fff',
+    backgroundColor: '#F6F1E8',
     borderTopWidth: 1,
-    borderTopColor: '#e8e8e8',
+    borderTopColor: '#E4D7C5',
   },
   mintBtn: {
     flex: 1,
-    backgroundColor: '#111',
+    backgroundColor: '#1E2C3A',
     borderRadius: 14,
     paddingVertical: 16,
     alignItems: 'center',
   },
   mintBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+
 });

@@ -49,7 +49,7 @@ public class Order {
     @Column(name = "buyer_wallet", length = 42)
     private String buyerWallet;
     
-    // Quantity (usually 1 per NFT item)
+    // Quantity (usually 1 per item)
     @Column(name = "quantity", nullable = false)
     @Builder.Default
     private Integer quantity = 1;
@@ -60,6 +60,10 @@ public class Order {
     
     @Column(name = "total_price", nullable = false, precision = 18, scale = 8)
     private BigDecimal totalPrice;
+
+    @Column(name = "currency", nullable = false, length = 3)
+    @Builder.Default
+    private String currency = "USD";
     
     @Column(name = "payment_tx_hash", length = 66)
     private String paymentTxHash;
@@ -85,10 +89,6 @@ public class Order {
     @Column(name = "status", nullable = false, length = 20)
     @Builder.Default
     private OrderStatus status = OrderStatus.PENDING;
-    
-    // Seal transfer upon completion
-    @Column(name = "seal_transfer_tx_hash", length = 66)
-    private String sealTransferTxHash;
     
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
