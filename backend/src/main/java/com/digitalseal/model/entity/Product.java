@@ -50,7 +50,6 @@ public class Product {
     @Column(name = "image_url", length = 500)
     private String imageUrl;
     
-    // Pricing
     @Column(name = "price", precision = 18, scale = 8)
     private BigDecimal price;
 
@@ -58,30 +57,18 @@ public class Product {
     @Builder.Default
     private String currency = "USD";
     
-    @Column(name = "metadata_base_uri", length = 500)
-    private String metadataBaseUri;
-    
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     @Builder.Default
     private ProductStatus status = ProductStatus.DRAFT;
     
-    // Listing fields
     @Column(name = "listed_at")
     private LocalDateTime listedAt;
     
-    @Column(name = "listing_deadline")
-    private LocalDateTime listingDeadline;
-    
-    @Column(name = "preminted_at")
-    private LocalDateTime premintedAt;
-    
-    // Product items (individual authenticated units)
     @Builder.Default
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductItem> items = new ArrayList<>();
     
-    // Orders
     @Builder.Default
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
     private List<Order> orders = new ArrayList<>();

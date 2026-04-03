@@ -25,11 +25,6 @@ public class CreateBrandRequest {
     @Schema(description = "Company physical address", example = "2 Rue du Pont Neuf, Paris, France")
     private String companyAddress;
     
-    @NotBlank(message = "Company wallet address is required")
-    @Pattern(regexp = "^0x[a-fA-F0-9]{40}$", message = "Invalid Ethereum address format")
-    @Schema(description = "Company Ethereum wallet address (optional)", example = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb")
-    private String companyWalletAddress;
-    
     @Schema(description = "Brand logo URL", example = "https://example.com/logo.png")
     private String logo;
 

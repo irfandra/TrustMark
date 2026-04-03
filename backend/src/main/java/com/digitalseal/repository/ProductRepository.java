@@ -33,16 +33,15 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     
     long countByCollectionId(Long collectionId);
     
-    // Marketplace queries — Listed products only
-    @Query("SELECT p FROM Product p WHERE p.status = 'LISTED' ORDER BY p.listedAt DESC")
+    @Query("SELECT p FROM Product p WHERE p.status = 'ACTIVE' ORDER BY p.listedAt DESC")
     Page<Product> findListedProducts(Pageable pageable);
     
-    @Query("SELECT p FROM Product p WHERE p.status = 'LISTED' AND p.category = :category ORDER BY p.listedAt DESC")
+    @Query("SELECT p FROM Product p WHERE p.status = 'ACTIVE' AND p.category = :category ORDER BY p.listedAt DESC")
     Page<Product> findListedProductsByCategory(@Param("category") ProductCategory category, Pageable pageable);
     
-    @Query("SELECT p FROM Product p WHERE p.status = 'LISTED' AND p.brand.id = :brandId ORDER BY p.listedAt DESC")
+    @Query("SELECT p FROM Product p WHERE p.status = 'ACTIVE' AND p.brand.id = :brandId ORDER BY p.listedAt DESC")
     Page<Product> findListedProductsByBrand(@Param("brandId") Long brandId, Pageable pageable);
     
-    @Query("SELECT p FROM Product p WHERE p.status = 'LISTED' AND LOWER(p.productName) LIKE LOWER(CONCAT('%', :query, '%')) ORDER BY p.listedAt DESC")
+    @Query("SELECT p FROM Product p WHERE p.status = 'ACTIVE' AND LOWER(p.productName) LIKE LOWER(CONCAT('%', :query, '%')) ORDER BY p.listedAt DESC")
     Page<Product> searchListedProducts(@Param("query") String query, Pageable pageable);
 }

@@ -19,9 +19,6 @@ public class ProductItemService {
     
     private final ProductItemRepository productItemRepository;
     
-    /**
-     * Get all items for a product
-     */
     public List<ProductItemResponse> getItemsByProduct(String productId) {
         return productItemRepository.findByProductProductCodeOrderByItemIndexAsc(productId).stream()
                 .map(this::mapToResponse)
@@ -40,14 +37,9 @@ public class ProductItemService {
                 .productName(item.getProduct().getProductName())
                 .itemSerial(item.getItemSerial())
                 .itemIndex(item.getItemIndex())
-                .metadataUri(item.getMetadataUri())
                 .certificateQrCode(certificateQrCode)
-                .sealStatus(item.getSealStatus())
-                .currentOwnerWallet(item.getCurrentOwnerWallet())
-                .currentOwnerId(item.getCurrentOwner() != null ? item.getCurrentOwner().getId() : null)
-                .currentOwnerUsername(item.getCurrentOwner() != null ? item.getCurrentOwner().getUserName() : null)
-                .mintedAt(item.getMintedAt())
-                .soldAt(item.getSoldAt())
+            .status(item.getStatus())
+            .shippedAt(item.getShippedAt())
                 .claimedAt(item.getClaimedAt())
                 .createdAt(item.getCreatedAt())
                 .build();

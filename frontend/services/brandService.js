@@ -14,7 +14,6 @@ export const brandService = {
         return myBrands[0];
       }
     } catch (_error) {
-      // Fallback to public endpoint for non-authenticated sessions.
     }
 
     return this.getBrandById(brandId);

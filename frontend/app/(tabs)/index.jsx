@@ -1,5 +1,5 @@
 import { Redirect } from 'expo-router';
 
 export default function HomeScreen() {
-  return <Redirect href="/(tabs)/(creator)/(tabs)/collection" />;
+  return <Redirect href="/(tabs)/(collection)/collection" />;
 }

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Animated, Text, View } from 'react-native';
+import { styles } from '../../constants/styles/loading-pulse-styles';
 
 const LoadingPulse = ({ label = 'Loading...' }) => {
   const dotA = useRef(new Animated.Value(0.45)).current;
@@ -50,29 +51,5 @@ const LoadingPulse = ({ label = 'Loading...' }) => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  wrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  dot: {
-    width: 9,
-    height: 9,
-    borderRadius: 4.5,
-    backgroundColor: '#111',
-  },
-  text: {
-    fontSize: 13,
-    color: '#555',
-    fontWeight: '500',
-  },
-});
 
 export default LoadingPulse;

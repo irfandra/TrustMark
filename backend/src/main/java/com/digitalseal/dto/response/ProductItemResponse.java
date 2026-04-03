@@ -1,6 +1,5 @@
 package com.digitalseal.dto.response;
 
-import com.digitalseal.model.entity.SealStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
@@ -29,30 +28,15 @@ public class ProductItemResponse {
     
     @Schema(description = "Index within the product", example = "1")
     private Integer itemIndex;
-    
-    @Schema(description = "Metadata URI")
-    private String metadataUri;
 
     @Schema(description = "QR payload printed on certificate")
     private String certificateQrCode;
-    
-    @Schema(description = "Authentication status", example = "PRE_MINTED")
-    private SealStatus sealStatus;
-    
-    @Schema(description = "Current owner wallet address")
-    private String currentOwnerWallet;
-    
-    @Schema(description = "Current owner user ID")
-    private Long currentOwnerId;
 
-    @Schema(description = "Current owner username")
-    private String currentOwnerUsername;
-    
-    @Schema(description = "When certificate QR was generated")
-    private LocalDateTime mintedAt;
-    
-    @Schema(description = "When the item was sold")
-    private LocalDateTime soldAt;
+    @Schema(description = "In-stock status. true means still in stock", example = "true")
+    private Boolean status;
+
+    @Schema(description = "When the item was shipped")
+    private LocalDateTime shippedAt;
     
     @Schema(description = "When the item was claimed via QR")
     private LocalDateTime claimedAt;

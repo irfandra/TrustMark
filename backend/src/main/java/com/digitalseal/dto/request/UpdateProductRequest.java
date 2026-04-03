@@ -15,23 +15,21 @@ import lombok.Data;
 public class UpdateProductRequest {
     
     @Size(min = 2, max = 255, message = "Product name must be between 2 and 255 characters")
-    @Schema(description = "Product name (DRAFT only)", example = "Louis Vuitton Speedy 30")
+    @Schema(description = "Product name (DRAFT/INACTIVE)", example = "Louis Vuitton Speedy 30")
     private String productName;
     
     @Size(max = 2000, message = "Description must not exceed 2000 characters")
-    @Schema(description = "Product description (DRAFT only)", example = "Iconic monogram canvas handbag")
+    @Schema(description = "Product description (DRAFT/INACTIVE)", example = "Iconic monogram canvas handbag")
     private String description;
     
-    @Schema(description = "Product category (DRAFT only)", example = "HANDBAG")
+    @Schema(description = "Product category (DRAFT/INACTIVE)", example = "HANDBAG")
     private ProductCategory category;
     
-    @Schema(description = "Product image URL (DRAFT only)", example = "https://example.com/product.png")
+    @Schema(description = "Product image URL (DRAFT/INACTIVE)", example = "https://example.com/product.png")
     private String imageUrl;
-    
-    // ...existing code...
     
     @DecimalMin(value = "0.0", inclusive = false, message = "Price must be greater than 0")
     @Digits(integer = 10, fraction = 8, message = "Invalid price format")
-    @Schema(description = "Price per unit in USD (DRAFT or PUBLISHED)", example = "199.99")
+    @Schema(description = "Price per unit in USD (DRAFT/ACTIVE/INACTIVE)", example = "199.99")
     private BigDecimal price;
 }

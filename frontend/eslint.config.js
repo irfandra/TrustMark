@@ -1,7 +1,8 @@
-// https://docs.expo.dev/guides/using-eslint/
 const { defineConfig } = require('eslint/config');
 const expoConfig = require('eslint-config-expo/flat');
 const path = require('path');
+
+const projectRoot = process.cwd();
 
 module.exports = defineConfig([
   expoConfig,
@@ -11,14 +12,14 @@ module.exports = defineConfig([
       'import/resolver': {
         alias: {
           map: [
-            ['@', path.resolve(__dirname)],
-            ['@/components', path.resolve(__dirname, 'components')],
-            ['@/app', path.resolve(__dirname, 'app')],
-            ['@/hooks', path.resolve(__dirname, 'hooks')],
-            ['@/assets', path.resolve(__dirname, 'assets')],
-            ['@/services', path.resolve(__dirname, 'services')],
-            ['@/config', path.resolve(__dirname, 'config')],
-            ['@/constants', path.resolve(__dirname, 'constants')],
+            ['@', path.resolve(projectRoot)],
+            ['@/components', path.resolve(projectRoot, 'components')],
+            ['@/app', path.resolve(projectRoot, 'app')],
+            ['@/hooks', path.resolve(projectRoot, 'hooks')],
+            ['@/assets', path.resolve(projectRoot, 'assets')],
+            ['@/services', path.resolve(projectRoot, 'services')],
+            ['@/config', path.resolve(projectRoot, 'config')],
+            ['@/constants', path.resolve(projectRoot, 'constants')],
           ],
           extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
         },

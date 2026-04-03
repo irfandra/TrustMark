@@ -3,17 +3,13 @@ package com.digitalseal.dto.request;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import lombok.Data;
 
 @Data
-@Schema(description = "Publish product request — finalize product details before pre-minting")
+@Schema(description = "Activate product request")
 public class PublishProductRequest {
     
-    @NotNull(message = "Price is required to publish")
+    @NotNull(message = "Price is required to activate")
     @Schema(description = "Price per unit in USD", example = "199.99")
     private BigDecimal price;
-    
-    @Schema(description = "Optional listing deadline", example = "2026-06-01T00:00:00")
-    private LocalDateTime listingDeadline;
 }

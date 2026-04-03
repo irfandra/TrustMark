@@ -3,6 +3,7 @@ package com.digitalseal.service;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -21,7 +22,6 @@ import com.digitalseal.model.entity.Product;
 import com.digitalseal.model.entity.ProductCategory;
 import com.digitalseal.model.entity.ProductItem;
 import com.digitalseal.model.entity.ProductStatus;
-import com.digitalseal.model.entity.SealStatus;
 import com.digitalseal.repository.BrandRepository;
 import com.digitalseal.repository.CollectionRepository;
 import com.digitalseal.repository.ProductItemRepository;
@@ -44,9 +44,6 @@ public class ProductService {
     private final CollectionRepository collectionRepository;
     private final ProductItemRepository productItemRepository;
     
-    /**
-     * Register a new product under a brand (status = DRAFT)
-     */
     @Transactional
     public ProductResponse createProduct(Long userId, Long brandId, CreateProductRequest request) {
         Brand brand = verifyBrandOwnership(userId, brandId);
@@ -60,7 +57,7 @@ public class ProductService {
         Product product = Product.builder()
                 .brand(brand)
                 .collection(collection)
-            .productCode(generateProductCode())
+                .productCode(generateProductCode())
                 .productName(request.getProductName())
                 .description(request.getDescription())
                 .category(request.getCategory())
@@ -69,19 +66,20 @@ public class ProductService {
                 .currency("USD")
                 .status(ProductStatus.DRAFT)
                 .build();
+
+        if (request.getQuantity() != null && request.getQuantity() > 0) {
+            generateProductItems(product, request.getQuantity());
+        }
         
-        Product saved = productRepository.save(product);
+        Product saved = productRepository.save(Objects.requireNonNull(product, "product must not be null"));
         log.info("Product '{}' (Code: {}) created under brand ID: {} by user ID: {}",
             saved.getProductName(), saved.getProductCode(), brandId, userId);
         
         return mapToResponse(saved);
     }
     
-    /**
-     * Get all products for a brand with optional category and status filters (public)
-     */
     public List<ProductResponse> getProductsByBrand(Long brandId, ProductCategory category, ProductStatus status) {
-        brandRepository.findById(brandId)
+        brandRepository.findById(Objects.requireNonNull(brandId, "brandId must not be null"))
                 .orElseThrow(() -> new ResourceNotFoundException("Brand not found"));
         
         List<Product> products;
@@ -101,11 +99,8 @@ public class ProductService {
                 .collect(Collectors.toList());
     }
     
-    /**
-     * Get products in a collection (public)
-     */
     public List<ProductResponse> getProductsByCollection(Long collectionId) {
-        collectionRepository.findById(collectionId)
+        collectionRepository.findById(Objects.requireNonNull(collectionId, "collectionId must not be null"))
                 .orElseThrow(() -> new ResourceNotFoundException("Collection not found"));
         
         return productRepository.findByCollectionId(collectionId).stream()
@@ -113,18 +108,12 @@ public class ProductService {
                 .collect(Collectors.toList());
     }
     
-    /**
-     * Get a single product by ID (public)
-     */
     public ProductResponse getProductById(String productId) {
         Product product = productRepository.findByProductCode(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
         return mapToResponse(product);
     }
     
-    /**
-     * Update a product. DRAFT: all fields editable. PUBLISHED: only price and quantity.
-     */
     @Transactional
     public ProductResponse updateProduct(Long userId, Long brandId, String productId, UpdateProductRequest request) {
         verifyBrandOwnership(userId, brandId);
@@ -132,35 +121,29 @@ public class ProductService {
         Product product = productRepository.findByProductCodeAndBrandId(productId, brandId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found or doesn't belong to this brand"));
         
-        if (product.getStatus() == ProductStatus.DRAFT) {
-            // Full edit allowed in DRAFT
+        if (product.getStatus() == ProductStatus.DRAFT || product.getStatus() == ProductStatus.INACTIVE) {
             if (request.getProductName() != null) product.setProductName(request.getProductName());
             if (request.getDescription() != null) product.setDescription(request.getDescription());
             if (request.getCategory() != null) product.setCategory(request.getCategory());
             if (request.getImageUrl() != null) product.setImageUrl(request.getImageUrl());
             if (request.getPrice() != null) product.setPrice(request.getPrice());
-        } else if (product.getStatus() == ProductStatus.PUBLISHED) {
-            // Only price editable in PUBLISHED
+        } else if (product.getStatus() == ProductStatus.ACTIVE) {
             if (request.getPrice() != null) product.setPrice(request.getPrice());
             
-            // Reject changes to immutable fields
             if (request.getProductName() != null || request.getDescription() != null || 
                 request.getCategory() != null || request.getImageUrl() != null) {
-                throw new InvalidStateException("Only price can be edited in PUBLISHED status");
+                throw new InvalidStateException("Only price can be edited in ACTIVE status");
             }
         } else {
             throw new InvalidStateException("Product cannot be edited in " + product.getStatus() + " status");
         }
         
-        Product updated = productRepository.save(product);
+        Product updated = productRepository.save(Objects.requireNonNull(product, "product must not be null"));
         log.info("Product '{}' (ID: {}) updated by user ID: {}", updated.getProductName(), productId, userId);
         
         return mapToResponse(updated);
     }
     
-    /**
-     * Delete a product (only DRAFT products can be deleted)
-     */
     @Transactional
     public void deleteProduct(Long userId, Long brandId, String productId) {
         verifyBrandOwnership(userId, brandId);
@@ -172,13 +155,10 @@ public class ProductService {
             throw new InvalidStateException("Only DRAFT products can be deleted. Current status: " + product.getStatus());
         }
         
-        productRepository.delete(product);
+        productRepository.delete(Objects.requireNonNull(product, "product must not be null"));
         log.info("Product '{}' (ID: {}) deleted by user ID: {}", product.getProductName(), productId, userId);
     }
     
-    /**
-     * Publish a product: DRAFT → PUBLISHED. Locks core details, allows price/qty edits.
-     */
     @Transactional
     public ProductResponse publishProduct(Long userId, Long brandId, String productId, PublishProductRequest request) {
         verifyBrandOwnership(userId, brandId);
@@ -186,30 +166,20 @@ public class ProductService {
         Product product = productRepository.findByProductCodeAndBrandId(productId, brandId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found or doesn't belong to this brand"));
         
-        if (product.getStatus() != ProductStatus.DRAFT) {
-            throw new InvalidStateException("Only DRAFT products can be published. Current status: " + product.getStatus());
-        }
-
-        if (product.getCurrency() == null || product.getCurrency().isBlank()) {
-            product.setCurrency("USD");
+        if (product.getStatus() != ProductStatus.DRAFT && product.getStatus() != ProductStatus.INACTIVE) {
+            throw new InvalidStateException("Only DRAFT or INACTIVE products can be activated. Current status: " + product.getStatus());
         }
         
         product.setPrice(request.getPrice());
-        if (request.getListingDeadline() != null) {
-            product.setListingDeadline(request.getListingDeadline());
-        }
-        product.setStatus(ProductStatus.PUBLISHED);
+        product.setStatus(ProductStatus.ACTIVE);
+        product.setListedAt(LocalDateTime.now());
         
-        Product saved = productRepository.save(product);
-        log.info("Product '{}' (ID: {}) published by user ID: {}", saved.getProductName(), productId, userId);
+        Product saved = productRepository.save(Objects.requireNonNull(product, "product must not be null"));
+        log.info("Product '{}' (ID: {}) activated by user ID: {}", saved.getProductName(), productId, userId);
         
         return mapToResponse(saved);
     }
     
-    /**
-     * Pre-mint product: PUBLISHED → PREMINTED. Generates product items with claim codes.
-        * Creates product items off-chain for creator fulfillment.
-     */
     @Transactional
     public ProductResponse premintProduct(Long userId, Long brandId, String productId, PremintProductRequest request) {
         verifyBrandOwnership(userId, brandId);
@@ -217,8 +187,8 @@ public class ProductService {
         Product product = productRepository.findByProductCodeAndBrandId(productId, brandId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found or doesn't belong to this brand"));
         
-        if (product.getStatus() != ProductStatus.PUBLISHED) {
-            throw new InvalidStateException("Only PUBLISHED products can be pre-minted. Current status: " + product.getStatus());
+        if (product.getStatus() != ProductStatus.ACTIVE) {
+            throw new InvalidStateException("Only ACTIVE products can generate product items. Current status: " + product.getStatus());
         }
         
         if (product.getPrice() == null) {
@@ -230,29 +200,11 @@ public class ProductService {
         }
 
         int mintQuantity = request.getQuantity();
-        
-        // Generate product items (individual authenticated units)
-        for (int i = 1; i <= mintQuantity; i++) {
-            String itemSerial = product.getProductCode() + "-" + String.format("%04d", i);
-            String claimCode = generateClaimCode();
 
-            ProductItem item = ProductItem.builder()
-                    .product(product)
-                .itemSerial(itemSerial)
-                    .itemIndex(i)
-                .claimCode(claimCode)
-                .certificateQrCode(buildCertificateQrCode(itemSerial))
-                    .sealStatus(SealStatus.PRE_MINTED)
-                    .build();
-            product.getItems().add(item);
-        }
-
-        product.setPremintedAt(LocalDateTime.now());
-        product.setStatus(ProductStatus.PREMINTED);
+        generateProductItems(product, mintQuantity);
+        product.setStatus(ProductStatus.ACTIVE);
         
-        // Save product + items off-chain only (creator-first mode)
-        Product saved = productRepository.save(product);
-        log.info("Product items created off-chain only for creator workflow.");
+        Product saved = productRepository.save(Objects.requireNonNull(product, "product must not be null"));
         
         log.info("Product '{}' (Code: {}) pre-minted with {} items by user ID: {}",
             saved.getProductName(), productId, mintQuantity, userId);
@@ -260,9 +212,6 @@ public class ProductService {
         return mapToResponse(saved);
     }
     
-    /**
-     * List product on marketplace: PREMINTED → LISTED.
-     */
     @Transactional
     public ProductResponse listProduct(Long userId, Long brandId, String productId) {
         verifyBrandOwnership(userId, brandId);
@@ -270,93 +219,40 @@ public class ProductService {
         Product product = productRepository.findByProductCodeAndBrandId(productId, brandId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found or doesn't belong to this brand"));
         
-        if (product.getStatus() != ProductStatus.PREMINTED) {
-            throw new InvalidStateException("Only PREMINTED products can be listed. Current status: " + product.getStatus());
+        if (product.getStatus() == ProductStatus.DRAFT) {
+            throw new InvalidStateException("DRAFT products must be activated first. Current status: " + product.getStatus());
         }
 
-        long availableItems = productItemRepository.countByProductIdAndSealStatus(product.getId(), SealStatus.PRE_MINTED);
+        long availableItems = productItemRepository.countByProductIdAndStatus(product.getId(), true);
         if (availableItems <= 0) {
             throw new InvalidStateException("Cannot list product without available pre-minted items");
         }
         
-        product.setStatus(ProductStatus.LISTED);
+        product.setStatus(ProductStatus.ACTIVE);
         product.setListedAt(LocalDateTime.now());
         
-        Product saved = productRepository.save(product);
+        Product saved = productRepository.save(Objects.requireNonNull(product, "product must not be null"));
         log.info("Product '{}' (ID: {}) listed on marketplace by user ID: {}", saved.getProductName(), productId, userId);
         
         return mapToResponse(saved);
     }
     
-    /**
-     * Delist product from marketplace: LISTED → DELISTED.
-     */
-    @Transactional
-    public ProductResponse delistProduct(Long userId, Long brandId, String productId) {
-        verifyBrandOwnership(userId, brandId);
-        
-        Product product = productRepository.findByProductCodeAndBrandId(productId, brandId)
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found or doesn't belong to this brand"));
-        
-        if (product.getStatus() != ProductStatus.LISTED && product.getStatus() != ProductStatus.SOLD_OUT) {
-            throw new InvalidStateException("Only LISTED or SOLD_OUT products can be delisted. Current status: " + product.getStatus());
-        }
-        
-        // DELISTED status removed: use appropriate fallback or remove
-        // ...existing code...
-        
-        Product saved = productRepository.save(product);
-        log.info("Product '{}' (ID: {}) delisted by user ID: {}", saved.getProductName(), productId, userId);
-        
-        return mapToResponse(saved);
-    }
-    
-    /**
-     * Archive a product: COMPLETED or DELISTED → ARCHIVED.
-     */
-    @Transactional
-    public ProductResponse archiveProduct(Long userId, Long brandId, String productId) {
-        verifyBrandOwnership(userId, brandId);
-        
-        Product product = productRepository.findByProductCodeAndBrandId(productId, brandId)
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found or doesn't belong to this brand"));
-        
-        if (product.getStatus() != ProductStatus.COMPLETED) {
-            throw new InvalidStateException("Only COMPLETED products can be archived. Current status: " + product.getStatus());
-        }
-        
-        // ARCHIVED status removed: use appropriate fallback or remove
-        // ...existing code...
-        
-        Product saved = productRepository.save(product);
-        log.info("Product '{}' (ID: {}) archived by user ID: {}", saved.getProductName(), productId, userId);
-        
-        return mapToResponse(saved);
-    }
-    
-    /**
-     * Get all available product categories
-     */
     public ProductCategory[] getCategories() {
         return ProductCategory.values();
     }
     
-    /**
-     * Verify the user owns the brand
-     */
     public Brand verifyBrandOwnership(Long userId, Long brandId) {
-        Brand brand = brandRepository.findById(brandId)
+        Brand brand = brandRepository.findById(Objects.requireNonNull(brandId, "brandId must not be null"))
                 .orElseThrow(() -> new ResourceNotFoundException("Brand not found"));
-
         return brand;
     }
     
     public ProductResponse mapToResponse(Product product) {
         long totalQuantity = productItemRepository.countByProductId(product.getId());
-        long availableQuantity = productItemRepository.countByProductIdAndSealStatus(product.getId(), SealStatus.PRE_MINTED);
+        long availableQuantity = productItemRepository.countByProductIdAndStatus(product.getId(), true);
 
         return ProductResponse.builder()
-            .id(product.getProductCode())
+                .id(product.getProductCode())
                 .brandId(product.getBrand().getId())
                 .brandName(product.getBrand().getBrandName())
                 .collectionId(product.getCollection() != null ? product.getCollection().getId() : null)
@@ -367,24 +263,32 @@ public class ProductService {
                 .imageUrl(product.getImageUrl())
                 .price(product.getPrice())
                 .currency(product.getCurrency() != null ? product.getCurrency() : "USD")
-            .totalQuantity((int) totalQuantity)
-            .availableQuantity((int) availableQuantity)
-                .metadataBaseUri(product.getMetadataBaseUri())
+                .totalQuantity((int) totalQuantity)
+                .availableQuantity((int) availableQuantity)
                 .status(product.getStatus())
                 .listedAt(product.getListedAt())
-                .listingDeadline(product.getListingDeadline())
-                .premintedAt(product.getPremintedAt())
                 .createdAt(product.getCreatedAt())
                 .updatedAt(product.getUpdatedAt())
                 .build();
     }
-    
-    private String generateClaimCode() {
-        return java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 16);
-    }
 
     private String buildCertificateQrCode(String itemSerial) {
         return "trustmark://certificate/" + itemSerial;
+    }
+
+    private void generateProductItems(Product product, int mintQuantity) {
+        for (int i = 1; i <= mintQuantity; i++) {
+            String itemSerial = product.getProductCode() + "-" + String.format("%04d", i);
+
+            ProductItem item = ProductItem.builder()
+                    .product(product)
+                    .itemSerial(itemSerial)
+                    .itemIndex(i)
+                    .certificateQrCode(buildCertificateQrCode(itemSerial))
+                    .status(true)
+                    .build();
+            product.getItems().add(item);
+        }
     }
 
     private String generateProductCode() {

@@ -25,9 +25,6 @@ public class UpdateCollectionRequest {
     @Schema(description = "Season identifier", example = "Spring 2026")
     private String season;
     
-    @Schema(description = "Whether this is a limited edition collection", example = "false")
-    private Boolean isLimitedEdition;
-    
     @Schema(description = "Release date", example = "2026-04-01")
     private LocalDate releaseDate;
 
@@ -37,12 +34,4 @@ public class UpdateCollectionRequest {
     @Size(max = 50, message = "Tag must not exceed 50 characters")
     @Schema(description = "Collection tag shown in card", example = "Limited")
     private String tag;
-
-    @Size(max = 20, message = "Tag color must not exceed 20 characters")
-    @Schema(description = "Tag background color", example = "#111")
-    private String tagColor;
-
-    @Size(max = 20, message = "Tag text color must not exceed 20 characters")
-    @Schema(description = "Tag text color", example = "#fff")
-    private String tagTextColor;
 }

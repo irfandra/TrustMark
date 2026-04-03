@@ -40,9 +40,6 @@ public class CollectionResponse {
     @Schema(description = "Season identifier", example = "Spring 2026")
     private String season;
     
-    @Schema(description = "Whether this is a limited edition", example = "false")
-    private Boolean isLimitedEdition;
-    
     @Schema(description = "Release date", example = "2026-04-01")
     private LocalDate releaseDate;
 
@@ -51,12 +48,6 @@ public class CollectionResponse {
 
     @Schema(description = "Collection tag shown in card", example = "Rare")
     private String tag;
-
-    @Schema(description = "Tag background color", example = "#111")
-    private String tagColor;
-
-    @Schema(description = "Tag text color", example = "#fff")
-    private String tagTextColor;
     
     @Schema(description = "Number of products in this collection", example = "5")
     private Long productCount;

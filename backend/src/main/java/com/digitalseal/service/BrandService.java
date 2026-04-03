@@ -5,16 +5,14 @@ import com.digitalseal.dto.request.UpdateBrandRequest;
 import com.digitalseal.dto.response.BrandResponse;
 import com.digitalseal.exception.UserAlreadyExistsException;
 import com.digitalseal.model.entity.Brand;
-import com.digitalseal.model.entity.User;
-import com.digitalseal.model.entity.UserRole;
 import com.digitalseal.repository.BrandRepository;
-import com.digitalseal.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,32 +21,17 @@ import java.util.stream.Collectors;
 public class BrandService {
     
     private final BrandRepository brandRepository;
-    private final UserRepository userRepository;
     
-    /**
-     * Register a new brand under the authenticated user
-     */
     @Transactional
     public BrandResponse createBrand(Long userId, CreateBrandRequest request) {
-        User user = findUserById(userId);
-        
-        // Check brand name uniqueness
         if (brandRepository.existsByBrandNameIgnoreCase(request.getBrandName())) {
             throw new UserAlreadyExistsException("Brand name already taken");
         }
         
-        // Check company wallet uniqueness if provided
-        if (request.getCompanyWalletAddress() != null && 
-            brandRepository.existsByCompanyWalletAddress(request.getCompanyWalletAddress())) {
-            throw new UserAlreadyExistsException("Company wallet address already registered to another brand");
-        }
-        
         Brand brand = Brand.builder()
-                .user(user)
                 .brandName(request.getBrandName())
                 .companyEmail(request.getCompanyEmail())
                 .companyAddress(request.getCompanyAddress())
-                .companyWalletAddress(request.getCompanyWalletAddress())
                 .logo(request.getLogo())
             .companyBanner(request.getCompanyBanner())
             .personInChargeName(request.getPersonInChargeName())
@@ -59,47 +42,30 @@ public class BrandService {
                 .verified(false)
                 .build();
         
-        Brand savedBrand = brandRepository.save(brand);
+        Brand savedBrand = brandRepository.save(Objects.requireNonNull(brand, "brand must not be null"));
         log.info("Brand '{}' created by user ID: {}", savedBrand.getBrandName(), userId);
-        
-        // Upgrade user role to BRAND if currently OWNER
-        if (user.getRole() == UserRole.OWNER) {
-            user.setRole(UserRole.BRAND);
-            userRepository.save(user);
-            log.info("User ID: {} role upgraded to BRAND", userId);
-        }
         
         return mapToBrandResponse(savedBrand);
     }
     
-    /**
-     * Get all brands owned by the authenticated user
-     */
     public List<BrandResponse> getMyBrands(Long userId) {
         return brandRepository.findAll().stream()
                 .map(this::mapToBrandResponse)
                 .collect(Collectors.toList());
     }
     
-    /**
-     * Get a specific brand by ID (public)
-     */
     public BrandResponse getBrandById(Long brandId) {
-        Brand brand = brandRepository.findById(brandId)
+        Brand brand = brandRepository.findById(Objects.requireNonNull(brandId, "brandId must not be null"))
                 .orElseThrow(() -> new RuntimeException("Brand not found"));
         return mapToBrandResponse(brand);
     }
     
-    /**
-     * Update a brand (only the owner can update)
-     */
     @Transactional
     public BrandResponse updateBrand(Long userId, Long brandId, UpdateBrandRequest request) {
-        Brand brand = brandRepository.findById(brandId)
+        Brand brand = brandRepository.findById(Objects.requireNonNull(brandId, "brandId must not be null"))
             .orElseThrow(() -> new RuntimeException("Brand not found"));
         
         if (request.getBrandName() != null) {
-            // Check uniqueness only if name is changing
             if (!brand.getBrandName().equalsIgnoreCase(request.getBrandName()) && 
                 brandRepository.existsByBrandNameIgnoreCase(request.getBrandName())) {
                 throw new UserAlreadyExistsException("Brand name already taken");
@@ -113,14 +79,6 @@ public class BrandService {
         
         if (request.getCompanyAddress() != null) {
             brand.setCompanyAddress(request.getCompanyAddress());
-        }
-        
-        if (request.getCompanyWalletAddress() != null) {
-            if (!request.getCompanyWalletAddress().equals(brand.getCompanyWalletAddress()) &&
-                brandRepository.existsByCompanyWalletAddress(request.getCompanyWalletAddress())) {
-                throw new UserAlreadyExistsException("Company wallet address already registered to another brand");
-            }
-            brand.setCompanyWalletAddress(request.getCompanyWalletAddress());
         }
         
         if (request.getLogo() != null) {
@@ -151,53 +109,29 @@ public class BrandService {
             brand.setDescription(request.getDescription());
         }
         
-        Brand updatedBrand = brandRepository.save(brand);
+        Brand updatedBrand = brandRepository.save(Objects.requireNonNull(brand, "brand must not be null"));
         log.info("Brand '{}' updated by user ID: {}", updatedBrand.getBrandName(), userId);
         
         return mapToBrandResponse(updatedBrand);
     }
     
-    /**
-     * Delete a brand (only the owner can delete)
-     */
     @Transactional
     public void deleteBrand(Long userId, Long brandId) {
-        Brand brand = brandRepository.findById(brandId)
+        Brand brand = brandRepository.findById(Objects.requireNonNull(brandId, "brandId must not be null"))
                 .orElseThrow(() -> new RuntimeException("Brand not found"));
         
-        brandRepository.delete(brand);
+        brandRepository.delete(Objects.requireNonNull(brand, "brand must not be null"));
         log.info("Brand '{}' deleted by user ID: {}", brand.getBrandName(), userId);
     }
     
-    private User findUserById(Long userId) {
-        if (userId != null) {
-            User direct = userRepository.findById(userId).orElse(null);
-            if (direct != null) {
-                return direct;
-            }
-        }
-
-        return userRepository.findAll().stream()
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("User not found"));
-    }
-    
     private BrandResponse mapToBrandResponse(Brand brand) {
-        String ownerName = "";
-        if (brand.getUser().getFirstName() != null) {
-            ownerName = brand.getUser().getFirstName();
-        }
-        if (brand.getUser().getLastName() != null) {
-            ownerName = ownerName.isEmpty() ? brand.getUser().getLastName() 
-                    : ownerName + " " + brand.getUser().getLastName();
-        }
+        String ownerName = brand.getPersonInChargeName();
         
         return BrandResponse.builder()
                 .id(brand.getId())
                 .brandName(brand.getBrandName())
                 .companyEmail(brand.getCompanyEmail())
                 .companyAddress(brand.getCompanyAddress())
-                .companyWalletAddress(brand.getCompanyWalletAddress())
                 .logo(brand.getLogo())
                 .companyBanner(brand.getCompanyBanner())
                 .personInChargeName(brand.getPersonInChargeName())
@@ -206,8 +140,8 @@ public class BrandService {
                 .personInChargePhone(brand.getPersonInChargePhone())
                 .description(brand.getDescription())
                 .verified(brand.getVerified())
-                .ownerId(brand.getUser().getId())
-                .ownerName(ownerName.isEmpty() ? null : ownerName)
+                .ownerId(null)
+                .ownerName(ownerName == null || ownerName.isBlank() ? null : ownerName)
                 .createdAt(brand.getCreatedAt())
                 .updatedAt(brand.getUpdatedAt())
                 .build();

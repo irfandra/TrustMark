@@ -26,9 +26,6 @@ public class BrandResponse {
     @Schema(description = "Company physical address", example = "2 Rue du Pont Neuf, Paris, France")
     private String companyAddress;
     
-    @Schema(description = "Company Ethereum wallet address", example = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb")
-    private String companyWalletAddress;
-    
     @Schema(description = "Brand logo URL", example = "https://example.com/logo.png")
     private String logo;
 

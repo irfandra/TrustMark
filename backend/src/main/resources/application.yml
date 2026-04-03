@@ -16,31 +16,6 @@ spring:
       "[hibernate.format_sql]": true
       "[hibernate.dialect]": org.hibernate.dialect.MySQL8Dialect
 
-  flyway:
-    enabled: true
-    baseline-on-migrate: true
-    locations: classpath:db/migration
-
-  mail:
-    host: ${MAIL_HOST:smtp.gmail.com}
-    port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME:}
-    password: ${MAIL_PASSWORD:}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enabled: true
-            required: true
-
-# App Configuration
-app:
-  mail:
-    from: ${MAIL_FROM:noreply@trustmark.app}
-    from-name: TrustMark
-
-# CORS Configuration
 cors:
   allowed-origins: ${CORS_ORIGINS:http://localhost:3000,http://localhost:8081,http://192.168.1.2:8080}
   allowed-methods: GET,POST,PUT,DELETE,OPTIONS
@@ -52,7 +27,6 @@ server:
   servlet:
     context-path: /api/v1
 
-# SpringDoc OpenAPI Configuration
 springdoc:
   api-docs:
     path: /v3/api-docs
@@ -67,9 +41,6 @@ springdoc:
   show-actuator: false
 
 management:
-  health:
-    mail:
-      enabled: false # mail SMTP not available in dev; don't fail the health check
   endpoint:
     health:
       show-details: always
@@ -78,12 +49,9 @@ logging:
   file:
     name: logs/trustmark.log
   pattern:
-    # Console: timestamp level [THREAD] --- message
     console: "%d{yyyy-MM-dd HH:mm:ss} %-5level --- %msg%n"
-    # File: same pattern — grep by [CATEGORY] or level
     file: "%d{yyyy-MM-dd HH:mm:ss} %-5level --- %msg%n"
   level:
     "[com.digitalseal]": INFO
     "[org.springframework.security]": WARN
     "[org.hibernate.SQL]": WARN
-    "[org.flywaydb]": INFO

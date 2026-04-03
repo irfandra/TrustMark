@@ -28,7 +28,6 @@ import com.digitalseal.service.ProductService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-// unused imports removed
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -44,9 +43,6 @@ public class ProductController {
     private final ProductService productService;
     private final ProductItemService productItemService;
     
-    // ========================
-    // Brand-scoped CRUD
-    // ========================
     
     @Operation(summary = "Register a new product", description = "Creates a new product under a brand with DRAFT status.")
     @PostMapping("/brands/{brandId}/products")
@@ -69,7 +65,7 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success(products, "Products retrieved successfully"));
     }
     
-    @Operation(summary = "Update a product", description = "DRAFT: all fields editable. PUBLISHED: only price and quantity.")
+    @Operation(summary = "Update a product", description = "DRAFT/INACTIVE: all fields editable. ACTIVE: only price is editable.")
     @PutMapping("/brands/{brandId}/products/{productId}")
     public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(
             @PathVariable Long brandId,
@@ -90,11 +86,8 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success(null, "Product deleted successfully"));
     }
     
-    // ========================
-    // Product Lifecycle (Status Transitions)
-    // ========================
     
-    @Operation(summary = "Publish a product", description = "DRAFT → PUBLISHED. Locks core details, sets price and quantity.")
+    @Operation(summary = "Activate a product", description = "DRAFT or INACTIVE -> ACTIVE.")
     @PostMapping("/brands/{brandId}/products/{productId}/publish")
     public ResponseEntity<ApiResponse<ProductResponse>> publishProduct(
             @PathVariable Long brandId,
@@ -102,10 +95,10 @@ public class ProductController {
             @Valid @RequestBody PublishProductRequest request) {
         Long userId = null;
         ProductResponse response = productService.publishProduct(userId, brandId, productId, request);
-        return ResponseEntity.ok(ApiResponse.success(response, "Product published successfully"));
+        return ResponseEntity.ok(ApiResponse.success(response, "Product activated successfully"));
     }
     
-    @Operation(summary = "Generate authentication items", description = "PUBLISHED → PREMINTED. Generates product items with claim codes.")
+    @Operation(summary = "Generate product items", description = "Legacy endpoint. Generates certificate product items while keeping status ACTIVE.")
     @PostMapping("/brands/{brandId}/products/{productId}/premint")
     public ResponseEntity<ApiResponse<ProductResponse>> premintProduct(
             @PathVariable Long brandId,
@@ -113,42 +106,19 @@ public class ProductController {
             @Valid @RequestBody PremintProductRequest request) {
         Long userId = null;
         ProductResponse response = productService.premintProduct(userId, brandId, productId, request);
-        return ResponseEntity.ok(ApiResponse.success(response, "Authentication items generated successfully"));
+        return ResponseEntity.ok(ApiResponse.success(response, "Product items generated successfully"));
     }
     
-    @Operation(summary = "List product on marketplace", description = "PREMINTED → LISTED. Makes product available for purchase.")
+    @Operation(summary = "Mark product active", description = "Legacy endpoint. Marks product ACTIVE if stock is available.")
     @PostMapping("/brands/{brandId}/products/{productId}/list")
     public ResponseEntity<ApiResponse<ProductResponse>> listProduct(
             @PathVariable Long brandId,
             @PathVariable String productId) {
         Long userId = null;
         ProductResponse response = productService.listProduct(userId, brandId, productId);
-        return ResponseEntity.ok(ApiResponse.success(response, "Product listed on marketplace"));
+        return ResponseEntity.ok(ApiResponse.success(response, "Product is active"));
     }
     
-    @Operation(summary = "Delist product from marketplace", description = "LISTED/SOLD_OUT → DELISTED.")
-    @PostMapping("/brands/{brandId}/products/{productId}/delist")
-    public ResponseEntity<ApiResponse<ProductResponse>> delistProduct(
-            @PathVariable Long brandId,
-            @PathVariable String productId) {
-        Long userId = null;
-        ProductResponse response = productService.delistProduct(userId, brandId, productId);
-        return ResponseEntity.ok(ApiResponse.success(response, "Product delisted from marketplace"));
-    }
-    
-    @Operation(summary = "Archive a product", description = "COMPLETED/DELISTED → ARCHIVED.")
-    @PostMapping("/brands/{brandId}/products/{productId}/archive")
-    public ResponseEntity<ApiResponse<ProductResponse>> archiveProduct(
-            @PathVariable Long brandId,
-            @PathVariable String productId) {
-        Long userId = null;
-        ProductResponse response = productService.archiveProduct(userId, brandId, productId);
-        return ResponseEntity.ok(ApiResponse.success(response, "Product archived"));
-    }
-    
-    // ========================
-    // Product Items (Brand-scoped)
-    // ========================
     
     @Operation(summary = "Get all items for a product", description = "Returns individual authenticated items for a product. Brand owner only.")
     @GetMapping("/brands/{brandId}/products/{productId}/items")
@@ -160,9 +130,6 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success(items, "Product items retrieved"));
     }
     
-    // ========================
-    // Public endpoints
-    // ========================
     
     @Operation(summary = "Get product by ID", description = "Publicly accessible.")
     @GetMapping("/products/{productId}")

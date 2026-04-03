@@ -23,10 +23,6 @@ public class Brand {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
-    
     @Column(name = "brand_name", nullable = false)
     private String brandName;
     
@@ -35,9 +31,6 @@ public class Brand {
     
     @Column(name = "company_address", columnDefinition = "TEXT")
     private String companyAddress;
-    
-    @Column(name = "company_wallet_address", unique = true, length = 42)
-    private String companyWalletAddress;
     
     @Column(name = "logo", length = 500)
     private String logo;

@@ -1,9 +1,5 @@
 package com.digitalseal.model.entity;
 
-/**
- * Predefined categories for luxury products.
- * Used for filtering and classification.
- */
 public enum ProductCategory {
     HANDBAG,
     WATCH,

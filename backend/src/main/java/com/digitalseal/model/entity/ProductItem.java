@@ -10,9 +10,6 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-/**
- * Represents a single authenticated unit of a product.
- */
 @Entity
 @Table(name = "product_items")
 @Data
@@ -30,46 +27,21 @@ public class ProductItem {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
     
-    // Per-item serial number (e.g., "LV-SPEEDY-30-001", "LV-SPEEDY-30-002")
     @Column(name = "item_serial", nullable = false, unique = true, length = 150)
     private String itemSerial;
     
-    // Sequence number within this product (1, 2, 3...)
     @Column(name = "item_index", nullable = false)
     private Integer itemIndex;
-    
-    @Column(name = "metadata_uri", length = 500)
-    private String metadataUri;
-    
-    // Claim code for QR-based claiming
-    @Column(name = "claim_code", unique = true, length = 64)
-    private String claimCode;
-    
-    @Column(name = "claim_code_hash", length = 64)
-    private String claimCodeHash;
 
-    // Authentication QR payload for this item. Issued once and immutable.
     @Column(name = "certificate_qr_code", nullable = false, updatable = false, length = 255)
     private String certificateQrCode;
-    
-    @Enumerated(EnumType.STRING)
-    @Column(name = "seal_status", nullable = false, length = 20)
+
+    @Column(name = "status", nullable = false)
     @Builder.Default
-    private SealStatus sealStatus = SealStatus.PRE_MINTED;
-    
-    // Ownership
-    @Column(name = "current_owner_wallet", length = 42)
-    private String currentOwnerWallet;
-    
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "current_owner_id")
-    private User currentOwner;
-    
-    @Column(name = "minted_at")
-    private LocalDateTime mintedAt;
-    
-    @Column(name = "sold_at")
-    private LocalDateTime soldAt;
+    private Boolean status = true;
+
+    @Column(name = "shipped_at")
+    private LocalDateTime shippedAt;
     
     @Column(name = "claimed_at")
     private LocalDateTime claimedAt;

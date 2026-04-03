@@ -144,7 +144,7 @@ OpenAPI JSON: `http://localhost:8080/api/v1/v3/api-docs`
 | GET | `/brands` | List brands |
 | GET | `/collections` | List collections |
 | GET | `/products` | List products |
-| GET | `/orders` | List orders |
+| GET | `/shipments` | List shipments |
 
 All endpoints currently run in no-auth mode.
 

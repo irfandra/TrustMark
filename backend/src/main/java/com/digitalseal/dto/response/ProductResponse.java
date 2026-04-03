@@ -44,36 +44,23 @@ public class ProductResponse {
     @Schema(description = "Product image URL", example = "https://example.com/product.png")
     private String imageUrl;
     
-    // Pricing
     @Schema(description = "Price per unit in USD", example = "199.99")
     private BigDecimal price;
 
     @Schema(description = "ISO 4217 currency code", example = "USD")
     private String currency;
     
-    // Quantity
     @Schema(description = "Total quantity to produce", example = "100")
     private Integer totalQuantity;
     
     @Schema(description = "Available quantity for purchase", example = "85")
     private Integer availableQuantity;
     
-    @Schema(description = "IPFS/metadata base URI", example = "ipfs://QmXyz...")
-    private String metadataBaseUri;
-    
-    // Status
     @Schema(description = "Product lifecycle status", example = "DRAFT")
     private ProductStatus status;
     
-    // Listing
     @Schema(description = "When product was listed on marketplace")
     private LocalDateTime listedAt;
-    
-    @Schema(description = "Listing deadline")
-    private LocalDateTime listingDeadline;
-    
-    @Schema(description = "When authentication items were generated")
-    private LocalDateTime premintedAt;
     
     @Schema(description = "Creation timestamp")
     private LocalDateTime createdAt;

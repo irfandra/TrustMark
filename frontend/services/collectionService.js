@@ -103,6 +103,34 @@ const mapUiStatusToApiStatus = (status) => {
   return 'DRAFT';
 };
 
+const normalizeProductStatusToApi = (status) => {
+  const normalized = String(status || '').trim().toUpperCase();
+
+  if (normalized === 'ACTIVE' || normalized === 'PUBLISHED' || normalized === 'PREMINTED' || normalized === 'LISTED') {
+    return 'ACTIVE';
+  }
+
+  if (normalized === 'INACTIVE' || normalized === 'SOLD_OUT' || normalized === 'COMPLETED' || normalized === 'EXPIRED') {
+    return 'INACTIVE';
+  }
+
+  return 'DRAFT';
+};
+
+const formatProductStatusLabel = (status) => {
+  const normalized = normalizeProductStatusToApi(status);
+
+  if (normalized === 'ACTIVE') {
+    return 'Active';
+  }
+
+  if (normalized === 'INACTIVE') {
+    return 'Inactive';
+  }
+
+  return 'Draft';
+};
+
 const mapCollectionToUI = (collection) => {
   const status = formatStatus(collection.status);
   const itemsCount = Number(collection.itemsCount ?? collection.productCount ?? 0);
@@ -123,6 +151,7 @@ const mapCollectionToUI = (collection) => {
     floorPrice: 'USD --',
     floorUsd: '',
     image: collection.imageUrl || FALLBACK_COLLECTION_IMAGE,
+    description: String(collection.description || '').trim(),
     items: `👜 ${itemsCount.toLocaleString()} Items`,
     tagColor: stockTag.tagColor,
     tagTextColor: stockTag.tagTextColor,
@@ -201,20 +230,16 @@ const shortenWallet = (wallet) => {
 };
 
 const resolveOwnerIdentity = (item, fallbackAddress) => {
-  const username = String(item?.currentOwnerUsername || '').trim();
-  if (username) {
-    return {
-      key: `user:${username.toLowerCase()}`,
-      label: `@${username}`,
-    };
-  }
-
-  const ownerWallet = String(item?.currentOwnerWallet || '').trim();
-  if (ownerWallet) {
-    return {
-      key: `wallet:${ownerWallet.toLowerCase()}`,
-      label: shortenWallet(ownerWallet),
-    };
+  if (typeof item?.status === 'boolean') {
+    return item.status
+      ? {
+          key: 'stock:in-stock',
+          label: 'In Stock',
+        }
+      : {
+          key: 'stock:unavailable',
+          label: 'Not In Stock',
+        };
   }
 
   const contractAddress = String(fallbackAddress || '').trim();
@@ -298,23 +323,20 @@ const formatOrderStatusLabel = (status) => {
   }
 };
 
-const formatSealStatusLabel = (status) => {
-  const normalized = String(status || '').trim().toUpperCase();
-
-  switch (normalized) {
-    case 'PRE_MINTED':
-      return 'In Stock';
-    case 'RESERVED':
-      return 'Reserved';
-    case 'REALIZED':
-      return 'Completed';
-    case 'BURNED':
-      return 'Removed';
-    case 'REVOKED':
-      return 'Revoked';
-    default:
-      return normalized ? normalized.replace(/_/g, ' ') : 'Unknown';
+const formatItemStatusLabel = (status) => {
+  if (typeof status === 'boolean') {
+    return status ? 'In Stock' : 'Not In Stock';
   }
+
+  const normalized = String(status || '').trim().toUpperCase();
+  if (normalized === 'TRUE' || normalized === 'IN_STOCK') {
+    return 'In Stock';
+  }
+  if (normalized === 'FALSE' || normalized === 'OUT_OF_STOCK') {
+    return 'Not In Stock';
+  }
+
+  return normalized ? normalized.replace(/_/g, ' ') : 'Unknown';
 };
 
 const buildOrderStatusIndex = (orders) => {
@@ -346,7 +368,7 @@ const mapProductItemsToStatusRows = (items, orders = []) => {
     const status =
       byItemId.get(String(item?.id ?? '')) ||
       (normalizedSerial ? bySerial.get(normalizedSerial) : null) ||
-      formatSealStatusLabel(item?.sealStatus);
+      formatItemStatusLabel(item?.status);
 
     return {
       itemId: serial ? `#${serial}` : `#${item?.id ?? 'N/A'}`,
@@ -377,8 +399,9 @@ const mapProductItemsToPurchaseRows = (items, fallbackProduct) => {
       edition: `${itemIndex.toLocaleString()} of ${total.toLocaleString()}`,
       price: adjustedPrice,
       certificateQrCode: String(item.certificateQrCode || '').trim(),
-      sealStatus: item.sealStatus || '',
-      mintedAt: item.mintedAt || null,
+      status: typeof item?.status === 'boolean' ? item.status : null,
+      statusLabel: formatItemStatusLabel(item?.status),
+      shippedAt: item.shippedAt || null,
       createdAt: item.createdAt || null,
     };
   });
@@ -401,7 +424,7 @@ const mapProductToCatalogItem = (product) => {
     image: product.imageUrl || FALLBACK_PRODUCT_IMAGE,
     description: product.description || '',
     category: product.category || 'OTHER',
-    status: product.status || 'DRAFT',
+    status: normalizeProductStatusToApi(product.status),
   };
 };
 
@@ -417,7 +440,7 @@ const mapProductToDetail = (product, productItems = [], orders = []) => {
       },
       {
         label: 'Status',
-        value: String(product.status || 'DRAFT').replace(/_/g, ' '),
+        value: formatProductStatusLabel(product.status),
       },
     ],
     purchaseItems: mapProductItemsToPurchaseRows(productItems, catalogItem),
@@ -513,8 +536,6 @@ export const collectionService = {
 
     const data = await apiRequest(`/products/${productId}`);
 
-    // Creator screens should prefer authenticated brand-scoped endpoint,
-    // then fallback to public endpoint for compatibility.
     let items = [];
     if (data?.brandId != null) {
       items = await apiRequest(`/brands/${data.brandId}/products/${productId}/items`).catch(() => []);
@@ -524,7 +545,7 @@ export const collectionService = {
       items = await apiRequest(`/products/${productId}/items`).catch(() => []);
     }
 
-    const orderPage = await apiRequest(`/orders/product/${productId}?page=0&size=100`).catch(() => null);
+    const orderPage = await apiRequest(`/shipments/product/${productId}?page=0&size=100`).catch(() => null);
 
     const orders = extractPageContent(orderPage);
 
@@ -550,7 +571,7 @@ export const collectionService = {
 
         const [items, orderPage] = await Promise.all([
           apiRequest(`/products/${productId}/items`).catch(() => []),
-          apiRequest(`/orders/product/${productId}?page=0&size=100`).catch(() => null),
+          apiRequest(`/shipments/product/${productId}?page=0&size=100`).catch(() => null),
         ]);
 
         const orders = extractPageContent(orderPage);
@@ -596,6 +617,7 @@ export const collectionService = {
       imageUrl,
       totalItems,
       variations,
+      publishNow = false,
     },
     brandId = DEFAULT_BRAND_ID
   ) {
@@ -612,6 +634,7 @@ export const collectionService = {
             return {
               name: String(variation.name || '').trim(),
               description: String(variation.description || '').trim(),
+              imageUrl: String(variation.imageUrl || '').trim(),
               quantity,
               price,
             };
@@ -644,11 +667,8 @@ export const collectionService = {
         description: String(about || '').trim() || null,
         imageUrl: String(imageUrl || '').trim() || null,
         season: String(category || '').trim() || null,
-        isLimitedEdition: false,
-        status: 'DRAFT',
+        status: publishNow ? 'ACTIVE' : 'DRAFT',
         tag: stockTag.tag,
-        tagColor: stockTag.tagColor,
-        tagTextColor: stockTag.tagTextColor,
       },
     });
 
@@ -662,9 +682,10 @@ export const collectionService = {
             productName: variation.name,
             description: variation.description || String(about || '').trim() || null,
             category: mappedCategory,
-            imageUrl: String(imageUrl || '').trim() || null,
+            imageUrl: variation.imageUrl || String(imageUrl || '').trim() || null,
             collectionId: createdCollection.id,
             price: variation.price,
+            quantity: variation.quantity,
           },
         })
       )
@@ -680,11 +701,8 @@ export const collectionService = {
       description,
       imageUrl,
       season,
-      isLimitedEdition,
       status,
       tag,
-      tagColor,
-      tagTextColor,
     },
     brandId = DEFAULT_BRAND_ID
   ) {
@@ -702,20 +720,11 @@ export const collectionService = {
       description: String(description || '').trim() || null,
       imageUrl: String(imageUrl || '').trim() || null,
       season: String(season || '').trim() || null,
-      isLimitedEdition: Boolean(isLimitedEdition),
       status: mapUiStatusToApiStatus(status),
     };
 
     if (tag !== undefined) {
       body.tag = String(tag || '').trim() || null;
-    }
-
-    if (tagColor !== undefined) {
-      body.tagColor = String(tagColor || '').trim() || null;
-    }
-
-    if (tagTextColor !== undefined) {
-      body.tagTextColor = String(tagTextColor || '').trim() || null;
     }
 
     return apiRequest(`/brands/${brandId}/collections/${collectionId}`, {

@@ -3,7 +3,6 @@ const path = require('path');
 
 const config = getDefaultConfig(__dirname);
 
-// Path alias mapping for module resolution
 const aliasMap = {
   '@': path.resolve(__dirname),
   '@/components': path.resolve(__dirname, 'components'),

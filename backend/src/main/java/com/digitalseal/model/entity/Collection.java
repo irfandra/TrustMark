@@ -42,10 +42,6 @@ public class Collection {
     @Column(name = "season", length = 100)
     private String season;
     
-    @Column(name = "is_limited_edition", nullable = false)
-    @Builder.Default
-    private Boolean isLimitedEdition = false;
-    
     @Column(name = "release_date")
     private LocalDate releaseDate;
 
@@ -56,12 +52,6 @@ public class Collection {
 
     @Column(name = "tag", length = 50)
     private String tag;
-
-    @Column(name = "tag_color", length = 20)
-    private String tagColor;
-
-    @Column(name = "tag_text_color", length = 20)
-    private String tagTextColor;
     
     @Builder.Default
     @OneToMany(mappedBy = "collection", cascade = CascadeType.ALL)

@@ -14,12 +14,10 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 public class DigitalSealApplication {
     
     public static void main(String[] args) {
-        // Load .env file
         Dotenv dotenv = Dotenv.configure()
                 .ignoreIfMissing()
                 .load();
         
-        // Set environment variables from .env file
         dotenv.entries().forEach(entry -> 
             System.setProperty(entry.getKey(), entry.getValue())
         );
