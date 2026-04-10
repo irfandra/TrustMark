@@ -16,10 +16,6 @@ const STATUS_CONFIG = {
   Completed: { color: '#27AE60', icon: 'checkmark-circle-outline', label: 'Completed' },
 };
 
-const CTA_BY_ACTION = {
-  Ship: { type: 'ship', label: 'Ship Item' },
-};
-
 const ReadOnlyDeliveryField = ({ label, value, multiline = false }) => (
   <View style={styles.deliveryFieldWrap}>
     <Text style={styles.deliveryFieldLabel}>{label}</Text>
@@ -102,8 +98,7 @@ const QRSection = ({ item }) => {
 
       await MediaLibrary.saveToLibraryAsync(downloadedFile.uri);
       Alert.alert('Saved!', 'QR code saved to your Photos.');
-    } catch (error) {
-      console.error('QR Download error:', error);
+    } catch (_error) {
       Alert.alert(
         'Download Failed',
         'Could not generate QR. Please check your internet connection and try again.',
@@ -136,8 +131,6 @@ const QRSection = ({ item }) => {
         </View>
 
         <View style={qrStyles.actionRow}>
-       
-
           <TouchableOpacity
             style={[
               qrStyles.actionBtn,
@@ -269,7 +262,7 @@ export default function CreatorOrderDetailPage() {
 
   const status = safeItem.statusSection || safeItem.delivery?.status || 'On Shipment';
   const statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG['On Shipment'];
-  const ctaConfig = CTA_BY_ACTION[safeItem.actionLabel] || null;
+  const ctaLabel = safeItem.actionLabel === 'Ship' ? 'Ship Item' : null;
   const isShipmentReadOnly = safeItem.actionLabel === 'Wait for Claim';
 
   const handleBackToOrders = () => {
@@ -277,7 +270,7 @@ export default function CreatorOrderDetailPage() {
   };
 
   const handleStatusAction = async () => {
-    if (!ctaConfig || !safeItem.orderId || isSubmitting) {
+    if (!ctaLabel || !safeItem.orderId || isSubmitting) {
       return;
     }
 
@@ -298,18 +291,16 @@ export default function CreatorOrderDetailPage() {
     try {
       setIsSubmitting(true);
 
-      if (ctaConfig.type === 'ship') {
-        await orderService.shipCreatorOrder(safeItem.orderId, {
-          trackingNumber,
-          recipientName,
-          recipientPhone,
-          shippingAddress,
-          estimatedAt,
-        });
-      }
+      await orderService.shipCreatorOrder(safeItem.orderId, {
+        trackingNumber,
+        recipientName,
+        recipientPhone,
+        shippingAddress,
+        estimatedAt,
+      });
 
       await loadOrderDetail();
-      Alert.alert('Success', `${ctaConfig.label} completed.`);
+      Alert.alert('Success', `${ctaLabel} completed.`);
     } catch (error) {
       Alert.alert('Action failed', error?.message || 'Unable to update order status.');
     } finally {
@@ -375,14 +366,6 @@ export default function CreatorOrderDetailPage() {
             resizeMode="cover"
           />
           <View style={styles.badgeRow}>
-            <View style={styles.badge}>
-              <Ionicons name="shield-checkmark" size={13} color="#1E2C3A" />
-              <Text style={styles.badgeText}>Authentic</Text>
-            </View>
-            <View style={styles.badge}>
-              <Ionicons name="business-outline" size={13} color="#1E2C3A" />
-              <Text style={styles.badgeText}>Creator View</Text>
-            </View>
             <View style={[styles.badge, { backgroundColor: statusConfig.color }]}>
               <Ionicons name={statusConfig.icon} size={13} color="#FFF9F0" />
               <Text style={[styles.badgeText, { color: '#FFF9F0' }]}>{statusConfig.label}</Text>
@@ -534,11 +517,11 @@ export default function CreatorOrderDetailPage() {
 
           {!!safeItem.qrValue && <QRSection item={safeItem} />}
 
-          <View style={{ height: ctaConfig ? 100 : 56 }} />
+          <View style={{ height: ctaLabel ? 100 : 56 }} />
         </View>
       </ScrollView>
 
-      {ctaConfig && (
+      {ctaLabel && (
         <SafeAreaView edges={['bottom']} style={styles.bottomActionWrap}>
           <TouchableOpacity
             style={[styles.bottomActionButton, isSubmitting && styles.bottomActionButtonDisabled]}
@@ -547,7 +530,7 @@ export default function CreatorOrderDetailPage() {
             activeOpacity={0.85}
           >
             <Text style={styles.bottomActionText}>
-              {isSubmitting ? 'Please wait...' : ctaConfig.label}
+              {isSubmitting ? 'Please wait...' : ctaLabel}
             </Text>
           </TouchableOpacity>
         </SafeAreaView>

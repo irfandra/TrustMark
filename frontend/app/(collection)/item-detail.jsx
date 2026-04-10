@@ -229,7 +229,7 @@ export default function ItemDetail() {
               {itemRows.map((row, idx) => (
                 <View
                   key={`${row.itemId}-${idx}`}
-                  style={[styles.tableRow, idx < itemRows.length - 1 && styles.tableRowBorder]}
+                  style={[styles.tableRow, idx < itemRows.length && styles.tableRowBorder]}
                 >
                   <Text
                     style={[styles.tableCell, styles.tableIdCell, { flex: 1.2 }]}

@@ -22,7 +22,6 @@ function RootLayout() {
 
   const detailRoutes = new Set([
     'collection-detail',
-    'collection-detail-listed',
     'new-collection',
     'new-collection-continue',
     'edit-collection',

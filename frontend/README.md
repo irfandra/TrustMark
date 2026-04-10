@@ -7,12 +7,13 @@ Creator-focused product authentication platform with off-chain QR lifecycle reco
 ## Table of Contents
 
 1. [Architecture](#architecture)
-2. [Backend Setup](#backend-setup)
-3. [Environment Variables](#environment-variables)
-4. [Docker / Database](#docker--database)
-5. [API Reference](#api-reference)
-6. [Security](#security)
-7. [Production Deployment](#production-deployment)
+2. [Frontend Component Architecture](#frontend-component-architecture)
+3. [Backend Setup](#backend-setup)
+4. [Environment Variables](#environment-variables)
+5. [Docker / Database](#docker--database)
+6. [API Reference](#api-reference)
+7. [Security](#security)
+8. [Production Deployment](#production-deployment)
 
 ---
 
@@ -24,8 +25,39 @@ Creator-focused product authentication platform with off-chain QR lifecycle reco
 | Database | MySQL 8.0 (Docker) |
 | Security | Spring Security + CORS policy |
 | QR + Identity | Off-chain QR payload lifecycle |
-| ORM / Migration | Hibernate JPA + Flyway |
+| ORM / Schema Init | Hibernate JPA + MySQL init SQL |
 | Client App | Expo Router + React Native |
+
+---
+
+## Frontend Component Architecture
+
+The project uses a feature-oriented structure to keep UI logic easy to navigate and maintain.
+
+### Folder Structure
+
+```
+components/
+├── context/           # React Context providers and global state
+├── screens/           # Screen-specific components grouped by feature
+├── shared/            # Reusable components used across multiple screens
+└── ui/                # Basic UI widgets and low-level building blocks
+```
+
+### Guidelines
+
+1. Place screen components in `screens/{feature}/`.
+2. Place cross-screen reusable components in `shared/`.
+3. Place atomic/presentational widgets in `ui/`.
+4. Keep one component per file and use descriptive file names.
+5. Update all import paths when moving files.
+
+### Import Example
+
+```jsx
+import { useRole } from '../../components/context/RoleContext';
+import UserHome from '../../components/screens/user/home';
+```
 
 ---
 
@@ -68,9 +100,9 @@ java -jar target/backend-1.0.0.jar
 mvn test
 ```
 
-### Database Migrations
+### Database Schema Initialization
 
-Flyway migrations apply automatically on startup from `src/main/resources/db/migration/`.
+Database schema and seed data are initialized from `backend/db/init/001_init.sql` when MySQL starts with a fresh volume.
 
 ---
 
@@ -93,7 +125,7 @@ CORS_ORIGINS=http://localhost:3000,http://localhost:8081
 | `create` | Drop + recreate schema | First-time setup only ⚠️ destroys data |
 | `validate` | Validate schema, no changes | Normal development & production |
 | `update` | Auto-update schema | Use with caution |
-| `none` | JPA does nothing | When Flyway manages everything |
+| `none` | JPA does nothing | External/manual schema management |
 
 Workflow: set `create` once → start app → stop → change to `validate`.
 

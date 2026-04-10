@@ -21,6 +21,7 @@ const normalizeCertificateSerial = (value) => {
 
 export default function AuthenticityCheckScreen() {
   const [permissions, requestPermission] = useCameraPermissions();
+
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scannedValue, setScannedValue] = useState('');
   const [isChecking, setIsChecking] = useState(false);

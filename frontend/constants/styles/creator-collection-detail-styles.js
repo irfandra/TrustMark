@@ -5,7 +5,7 @@ export const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F6F1E8' },
 
   heroWrap: { width: '100%', height: 260 },
-  heroOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '75%', backgroundColor: 'rgba(0,0,0,0.55)' },
+  heroOverlay: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.55)' },
   backBtn: { position: 'absolute', top: 16, left: 16, zIndex: 10, flexDirection: 'row', alignItems: 'center', gap: 4 },
   backText: { color: '#fff', fontSize: 16, fontWeight: '500' },
   heroContent: { position: 'absolute', bottom: 32, left: 0, right: 0, padding: 16 },

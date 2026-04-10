@@ -256,8 +256,7 @@ export default function GenerateAllQrCollections() {
           const downloadedFile = await File.downloadFileAsync(sourceUrl, targetFile, { idempotent: true });
           await MediaLibrary.saveToLibraryAsync(downloadedFile.uri);
           successCount += 1;
-        } catch (error) {
-          console.warn('Failed to save QR image row', qr.id, error);
+        } catch {
         }
       }
 
@@ -280,8 +279,8 @@ export default function GenerateAllQrCollections() {
         message: `Digital Seal Certificate QR for ${qr.itemName}\n\nItem Serial: ${qr.itemSerial}\nCollection: ${qr.collection}\nGenerated: ${qr.genDate}\nPayload: ${qr.activeQrPayload}`,
         title: 'Share QR Code',
       });
-    } catch (error) {
-      console.error(error);
+    } catch {
+      Alert.alert('Share failed', 'Unable to open the share sheet right now.');
     }
   };
 
