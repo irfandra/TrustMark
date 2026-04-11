@@ -8,11 +8,11 @@
 
 ## First Start The Backend (MySQL + Java)
 
-
+'''bash
 cd backend
 cp .env.example .env
 docker compose up --build -d
-
+'''
 Backend and Docs Endpoint:
 - API base: http://127.0.0.1:8082/api/v1
 - Swagger UI: http://127.0.0.1:8082/api/v1/swagger-ui.html
