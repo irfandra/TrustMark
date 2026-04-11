@@ -71,7 +71,7 @@ public class Product {
     
     @Builder.Default
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
-    private List<Order> orders = new ArrayList<>();
+    private List<Shipment> shipments = new ArrayList<>();
     
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)

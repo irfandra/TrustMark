@@ -39,8 +39,8 @@ public class Collection {
     @Column(name = "image_url", length = 500)
     private String imageUrl;
     
-    @Column(name = "season", length = 100)
-    private String season;
+    @Column(name = "category", length = 100)
+    private String category;
     
     @Column(name = "release_date")
     private LocalDate releaseDate;

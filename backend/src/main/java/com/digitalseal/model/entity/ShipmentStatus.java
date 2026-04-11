@@ -1,6 +1,6 @@
 package com.digitalseal.model.entity;
 
-public enum OrderStatus {
+public enum ShipmentStatus {
     PENDING,
     PAYMENT_RECEIVED,
     PROCESSING,

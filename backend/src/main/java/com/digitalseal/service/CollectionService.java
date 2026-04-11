@@ -41,7 +41,7 @@ public class CollectionService {
                 .collectionName(request.getCollectionName())
                 .description(request.getDescription())
                 .imageUrl(request.getImageUrl())
-                .season(request.getSeason())
+                .category(request.getCategory())
                 .releaseDate(request.getReleaseDate())
             .status(request.getStatus() != null ? request.getStatus() : CollectionStatus.DRAFT)
             .tag(request.getTag())
@@ -91,8 +91,8 @@ public class CollectionService {
         if (request.getImageUrl() != null) {
             collection.setImageUrl(request.getImageUrl());
         }
-        if (request.getSeason() != null) {
-            collection.setSeason(request.getSeason());
+        if (request.getCategory() != null) {
+            collection.setCategory(request.getCategory());
         }
         if (request.getReleaseDate() != null) {
             collection.setReleaseDate(request.getReleaseDate());
@@ -138,7 +138,7 @@ public class CollectionService {
                 .collectionName(collection.getCollectionName())
                 .description(collection.getDescription())
                 .imageUrl(collection.getImageUrl())
-                .season(collection.getSeason())
+                .category(collection.getCategory())
                 .releaseDate(collection.getReleaseDate())
             .status(collection.getStatus())
             .tag(collection.getTag())

@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.digitalseal.dto.request.CreateProductRequest;
-import com.digitalseal.dto.request.PremintProductRequest;
 import com.digitalseal.dto.request.PublishProductRequest;
 import com.digitalseal.dto.request.UpdateProductRequest;
 import com.digitalseal.dto.response.ProductResponse;
@@ -176,38 +175,6 @@ public class ProductService {
         
         Product saved = productRepository.save(Objects.requireNonNull(product, "product must not be null"));
         log.info("Product '{}' (ID: {}) activated by user ID: {}", saved.getProductName(), productId, userId);
-        
-        return mapToResponse(saved);
-    }
-    
-    @Transactional
-    public ProductResponse premintProduct(Long userId, Long brandId, String productId, PremintProductRequest request) {
-        verifyBrandOwnership(userId, brandId);
-        
-        Product product = productRepository.findByProductCodeAndBrandId(productId, brandId)
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found or doesn't belong to this brand"));
-        
-        if (product.getStatus() != ProductStatus.ACTIVE) {
-            throw new InvalidStateException("Only ACTIVE products can generate product items. Current status: " + product.getStatus());
-        }
-        
-        if (product.getPrice() == null) {
-            throw new InvalidStateException("Product must have a price set before pre-minting");
-        }
-
-        if (!product.getItems().isEmpty()) {
-            throw new InvalidStateException("Product items already generated for this product");
-        }
-
-        int mintQuantity = request.getQuantity();
-
-        generateProductItems(product, mintQuantity);
-        product.setStatus(ProductStatus.ACTIVE);
-        
-        Product saved = productRepository.save(Objects.requireNonNull(product, "product must not be null"));
-        
-        log.info("Product '{}' (Code: {}) pre-minted with {} items by user ID: {}",
-            saved.getProductName(), productId, mintQuantity, userId);
         
         return mapToResponse(saved);
     }

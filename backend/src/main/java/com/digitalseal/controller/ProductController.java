@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.digitalseal.dto.request.CreateProductRequest;
-import com.digitalseal.dto.request.PremintProductRequest;
 import com.digitalseal.dto.request.PublishProductRequest;
 import com.digitalseal.dto.request.UpdateProductRequest;
 import com.digitalseal.dto.response.ApiResponse;
@@ -96,17 +95,6 @@ public class ProductController {
         Long userId = null;
         ProductResponse response = productService.publishProduct(userId, brandId, productId, request);
         return ResponseEntity.ok(ApiResponse.success(response, "Product activated successfully"));
-    }
-    
-    @Operation(summary = "Generate product items", description = "Legacy endpoint. Generates certificate product items while keeping status ACTIVE.")
-    @PostMapping("/brands/{brandId}/products/{productId}/premint")
-    public ResponseEntity<ApiResponse<ProductResponse>> premintProduct(
-            @PathVariable Long brandId,
-            @PathVariable String productId,
-            @Valid @RequestBody PremintProductRequest request) {
-        Long userId = null;
-        ProductResponse response = productService.premintProduct(userId, brandId, productId, request);
-        return ResponseEntity.ok(ApiResponse.success(response, "Product items generated successfully"));
     }
     
     @Operation(summary = "Mark product active", description = "Legacy endpoint. Marks product ACTIVE if stock is available.")

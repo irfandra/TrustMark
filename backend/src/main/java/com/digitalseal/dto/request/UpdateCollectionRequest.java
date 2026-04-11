@@ -21,9 +21,9 @@ public class UpdateCollectionRequest {
     @Schema(description = "Collection image URL", example = "https://example.com/collection.png")
     private String imageUrl;
     
-    @Size(max = 100, message = "Season must not exceed 100 characters")
-    @Schema(description = "Season identifier", example = "Spring 2026")
-    private String season;
+    @Size(max = 100, message = "Category must not exceed 100 characters")
+    @Schema(description = "Collection category", example = "Luxury Bags")
+    private String category;
     
     @Schema(description = "Release date", example = "2026-04-01")
     private LocalDate releaseDate;

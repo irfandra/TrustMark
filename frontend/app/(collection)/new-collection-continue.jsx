@@ -203,7 +203,7 @@ export default function NewCollectionContinue() {
         params: {
           collectionId: String(createdCollection.id),
           title: createdCollection.collectionName || setupData.collectionName,
-          subtitle: createdCollection.season || setupData.category,
+          subtitle: createdCollection.category || setupData.category,
           status: uiStatus,
           tag: createdCollection.tag || 'In Stock',
           image: encodeURIComponent(image),

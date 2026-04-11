@@ -63,7 +63,7 @@ export default function EditCollectionScreen() {
 
       const updatedCollection = await collectionService.updateCollection(collectionId, {
         collectionName: safeTitle,
-        season: String(subtitle || '').trim(),
+        category: String(subtitle || '').trim(),
         imageUrl: String(imageUrl || '').trim(),
         status,
         isLimitedEdition: false,
@@ -76,7 +76,7 @@ export default function EditCollectionScreen() {
         params: {
           collectionId: String(updatedCollection?.id || collectionId),
           title: updatedCollection?.collectionName || safeTitle,
-          subtitle: updatedCollection?.season || String(subtitle || '').trim(),
+          subtitle: updatedCollection?.category || String(subtitle || '').trim(),
           status: normalizeStatus(updatedCollection?.status || status),
           tag: updatedCollection?.tag || parseParam(params.tag) || 'In Stock',
           image: encodeURIComponent(nextImage),
@@ -108,7 +108,7 @@ export default function EditCollectionScreen() {
           placeholderTextColor="#9A8E80"
         />
 
-        <Text style={styles.label}>Category / Season</Text>
+        <Text style={styles.label}>Category</Text>
         <TextInput
           style={styles.input}
           value={subtitle}

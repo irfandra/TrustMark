@@ -28,7 +28,7 @@ CREATE TABLE collections (
     collection_name VARCHAR(255) NOT NULL,
     description TEXT,
     image_url VARCHAR(500),
-    season VARCHAR(100),
+    category VARCHAR(100),
     release_date DATE,
     status VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
     tag VARCHAR(50),
@@ -145,7 +145,7 @@ INSERT INTO collections (
     collection_name,
     description,
     image_url,
-    season,
+    category,
     release_date,
     status,
     tag

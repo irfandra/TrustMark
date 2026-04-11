@@ -1,6 +1,6 @@
 package com.digitalseal.dto.response;
 
-import com.digitalseal.model.entity.OrderStatus;
+import com.digitalseal.model.entity.ShipmentStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -13,13 +13,13 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Order information response")
-public class OrderResponse {
+@Schema(description = "Shipment information response")
+public class ShipmentResponse {
     
-    @Schema(description = "Order ID", example = "1")
+    @Schema(description = "Shipment ID", example = "1")
     private Long id;
     
-    @Schema(description = "Unique order number", example = "ORD-20260303-ABC123")
+    @Schema(description = "Unique shipment number", example = "ORD-20260303-ABC123")
     private String orderNumber;
     
     @Schema(description = "Product ID", example = "A1B2C3")
@@ -43,7 +43,7 @@ public class OrderResponse {
     @Schema(description = "Brand owner username", example = "hermesofficial")
     private String brandOwnerUsername;
     
-    @Schema(description = "Quantity ordered", example = "1")
+    @Schema(description = "Shipment quantity", example = "1")
     private Integer quantity;
     
     @Schema(description = "Unit price in USD", example = "199.99")
@@ -55,8 +55,8 @@ public class OrderResponse {
     @Schema(description = "ISO 4217 currency code", example = "USD")
     private String currency;
     
-    @Schema(description = "Order status", example = "PENDING")
-    private OrderStatus status;
+    @Schema(description = "Shipment status", example = "PENDING")
+    private ShipmentStatus status;
     
     @Schema(description = "Shipping address")
     private String shippingAddress;
@@ -64,7 +64,7 @@ public class OrderResponse {
     @Schema(description = "Tracking number")
     private String trackingNumber;
     
-    @Schema(description = "When order was created")
+    @Schema(description = "When shipment was created")
     private LocalDateTime createdAt;
     
     @Schema(description = "When item was shipped")
@@ -73,7 +73,7 @@ public class OrderResponse {
     @Schema(description = "When item is estimated to arrive")
     private LocalDateTime estimatedAt;
     
-    @Schema(description = "When order was completed")
+    @Schema(description = "When shipment was completed")
     private LocalDateTime completedAt;
 
 }

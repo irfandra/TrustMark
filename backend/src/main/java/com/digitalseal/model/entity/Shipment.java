@@ -18,7 +18,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @NoArgsConstructor
 @AllArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
-public class Order {
+public class Shipment {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -70,7 +70,7 @@ public class Order {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     @Builder.Default
-    private OrderStatus status = OrderStatus.PENDING;
+    private ShipmentStatus status = ShipmentStatus.PENDING;
     
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
